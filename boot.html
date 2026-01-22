@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BootSequence: El Despertar de la Máquina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoom-in { from { transform: scale(0.95); } to { transform: scale(1); } }
+        .animate-in { animation: fade-in 0.2s ease-out forwards; }
+        .zoom-in { animation: zoom-in 0.2s ease-out forwards; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const IconBase = ({ size = 24, className = "", children }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const Power = (props) => <IconBase {...props}><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></IconBase>;
+        const Monitor = (props) => <IconBase {...props}><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></IconBase>;
+        const Terminal = (props) => <IconBase {...props}><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></IconBase>;
+        const SkipForward = (props) => <IconBase {...props}><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></IconBase>;
+        const Coffee = (props) => <IconBase {...props}><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></IconBase>;
+        const RotateCcw = (props) => <IconBase {...props}><path d="M1 4v6h6"></path><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></IconBase>;
+        const XIcon = (props) => <IconBase {...props}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></IconBase>;
+        const Info = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></IconBase>;
+
+        const BootSimulator = () => {
+            const [currentStep, setCurrentStep] = useState(0);
+            const [theme, setTheme] = useState('terminal'); 
+            const [autoPlay, setAutoPlay] = useState(false);
+            const [modalData, setModalData] = useState(null);
+            const logEndRef = useRef(null);
+
+            const termDictionary = {
+                "PSU": "Power Supply Unit (Fuente de Alimentación). Es el corazón eléctrico. Convierte la corriente de tu enchufe en voltajes que el PC puede usar sin quemarse.",
+                "Power Good": "Es una señal de seguridad. La fuente dice: '¡La electricidad es estable!'. Sin esta señal, la placa base se niega a encender para protegerse.",
+                "Reset vector": "Es la primera dirección de memoria que lee el procesador. Como la primera línea de un libro que le dice dónde empezar a leer.",
+                "RAM": "Random Access Memory. Es la mesa de trabajo del ordenador. Todo lo que haces ahora mismo vive aquí. Si se apaga la luz, se borra.",
+                "GPU": "Graphics Processing Unit. Es el artista del sistema. Se encarga de dibujar todo lo que ves en la pantalla para que la CPU no tenga que hacerlo.",
+                "UEFI": "El sustituto moderno de la BIOS. Es un mini sistema operativo en un chip que prepara el hardware antes de cargar Windows o Linux.",
+                "SECURE_BOOT": "Un guardia de seguridad que comprueba si el sistema operativo ha sido manipulado por virus antes de dejarlo arrancar.",
+                "MBR": "Master Boot Record. Es el índice principal del disco duro. Ocupa los primeros 512 bytes y dice dónde están las particiones.",
+                "Sector 0": "El primerísimo pedazo físico del disco duro. Si este sector se daña, el disco suele quedar inutilizable para arrancar.",
+                "0x7C00": "Una dirección de memoria mágica e histórica. Desde hace 40 años, todos los PCs cargan el arranque exactamente en este punto.",
+                "GRUB": "Grand Unified Bootloader. Es el programa que te deja elegir qué sistema operativo arrancar si tienes varios instalados.",
+                "Filesystem": "El sistema de archivos. Es la forma en que se organizan los datos en el disco. Sin él, los datos serían un montón de unos y ceros sin sentido.",
+                "ext4": "Un tipo de sistema de archivos muy usado en Linux. Es robusto y rápido. En Windows, su equivalente sería NTFS.",
+                "vmlinuz": "Es el archivo que contiene el Kernel de Linux comprimido. La 'z' al final significa 'zipped' (comprimido).",
+                "Kernel": "El núcleo. El jefe absoluto. Es el programa que tiene control total sobre todo el hardware y gestiona a todos los demás programas.",
+                "Microcode": "Es como una actualización de firmware para el propio procesador. Corrige errores de fábrica en la CPU al arrancar.",
+                "Drivers": "Son los traductores. Permiten que el Kernel (software) hable con el hardware (como tu tarjeta de sonido o WiFi).",
+                "SYSTEMD": "El primer proceso real (PID 1) en sistemas Linux modernos. Es la madre de todos los demás procesos y servicios.",
+                "DISPLAY_SERVER": "El programa que coordina el dibujo de ventanas y gráficos en la pantalla. Sin él, solo verías texto.",
+                "Wayland": "Un protocolo gráfico moderno, más seguro y eficiente que el antiguo X11, para gestionar cómo se muestran las ventanas.",
+                "0.000000": "El contador de tiempo del Kernel. Empieza en cero absoluto cuando el Kernel toma el control.",
+                "16384MB": "La cantidad de memoria RAM detectada. En este caso, 16 Gigabytes."
+            };
+
+            const bootSequence = [
+                {
+                    id: 0,
+                    phase: "OFF",
+                    technical: "SYSTEM HALTED. WAITING FOR POWER_GOOD SIGNAL...",
+                    simple: "El sistema está apagado. Es como cuando estás profundamente dormido. No hay actividad, pero el sistema está esperando ese pequeño empujón de electricidad para despertar.",
+                    icon: <Power size={48} />
+                },
+                {
+                    id: 1,
+                    phase: "POWER ON",
+                    technical: "[  0.000000] PSU: Power Good signal received.\n[  0.000120] CPU: Reset vector fetch initialized.",
+                    simple: "Has pulsado el botón. La fuente de alimentación envía electricidad a la placa base. Es el equivalente a abrir los ojos por la mañana; la sangre (electricidad) empieza a fluir por el cuerpo.",
+                    icon: <Power size={48} />
+                },
+                {
+                    id: 2,
+                    phase: "POST (Power-On Self-Test)",
+                    technical: "[  0.025000] RAM: Checking 16384MB... OK\n[  0.032000] GPU: NVIDIA RTX detected... OK\n[  0.045000] KEYBOARD: Detected.",
+                    simple: "El ``POST'' es un chequeo médico rápido. Antes de levantarse, el ordenador comprueba que tiene sus ``brazos'' (RAM) y sus ``ojos'' (Tarjeta Gráfica) funcionando correctamente. Si falta la memoria, aquí es donde pitaría.",
+                    icon: <Monitor size={48} />
+                },
+                {
+                    id: 3,
+                    phase: "BIOS / UEFI HANDOFF",
+                    technical: "[  0.150000] UEFI: American Megatrends v2.4\n[  0.155000] SECURE_BOOT: Enabled\n[  0.160000] SEARCHING: Boot device priority...",
+                    simple: "La BIOS es el ``capataz'' de la fábrica. Es un software muy básico que vive en un chip. Su único trabajo es despertar a los componentes y preguntar: ``¿Dónde está el sistema operativo?''.",
+                    icon: <Terminal size={48} />
+                },
+                {
+                    id: 4,
+                    phase: "MBR / BOOT SECTOR",
+                    technical: "[  0.320000] DISK0: Sector 0 read successfully.\n[  0.325000] FOUND: Master Boot Record (MBR).\n[  0.330000] JUMP: 0x7C00 execution.",
+                    simple: "El ordenador ha encontrado el disco duro. Lee el primer sector (MBR), que es como el índice de un libro. Este índice le dice exactamente en qué página empieza el sistema operativo real.",
+                    icon: <SkipForward size={48} />
+                },
+                {
+                    id: 5,
+                    phase: "BOOTLOADER (GRUB/WinLoad)",
+                    technical: "[  0.650000] GRUB loading.\n[  0.655000] FILESYSTEM: ext4 mounted (ro).\n[  0.700000] LOADING: vmlinuz-6.5.0-generic...",
+                    simple: "El ``Bootloader'' es el portero del edificio. Si tienes Windows y Linux, este es el menú que te deja elegir. Carga el núcleo del sistema (Kernel) en la memoria RAM.",
+                    icon: <Coffee size={48} />
+                },
+                {
+                    id: 6,
+                    phase: "KERNEL LOADING",
+                    technical: "[  1.200000] Linux version 6.5.0\n[  1.250000] CPU0: Microcode updated.\n[  1.400000] DRIVERS: USB, NVMe, Audio, Network initialized.",
+                    simple: "El ``Kernel'' es el cerebro real, el Jefe. Toma el control total del hardware. Ya no depende de la BIOS. Aquí es donde se cargan los traductores (drivers) para poder hablar con el ratón, el WiFi y el sonido.",
+                    icon: <Monitor size={48} />
+                },
+                {
+                    id: 7,
+                    phase: "INIT PROCESS / SERVICES",
+                    technical: "[  2.100000] SYSTEMD: Starting services...\n[  OK  ] Started Network Manager.\n[  OK  ] Started User Login Service.\n[  OK  ] Started Graphical Interface.",
+                    simple: "El Jefe (Kernel) contrata a los trabajadores (Servicios). Se inician los programas en segundo plano: el que gestiona el WiFi, el que controla la hora, el antivirus... Todo se prepara para tu llegada.",
+                    icon: <Terminal size={48} />
+                },
+                {
+                    id: 8,
+                    phase: "USER SPACE / LOGIN",
+                    technical: "[  4.500000] DISPLAY_SERVER: Wayland ready.\n[  5.000000] LOGIN_PROMPT: Ready for user input.\n[  INFO  ] SYSTEM READY.",
+                    simple: "¡Sistema listo! La interfaz gráfica aparece (tu escritorio). El ordenador ha pasado de ser un montón de chips fríos a una herramienta lista para trabajar. Puedes iniciar sesión.",
+                    icon: <Power size={48} className="text-green-500" />
+                }
+            ];
+
+            useEffect(() => {
+                logEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }, [currentStep]);
+
+            useEffect(() => {
+                let interval;
+                if (autoPlay && currentStep < bootSequence.length - 1) {
+                interval = setInterval(() => {
+                    setCurrentStep(prev => prev + 1);
+                }, 3000);
+                } else if (currentStep === bootSequence.length - 1) {
+                setAutoPlay(false);
+                }
+                return () => clearInterval(interval);
+            }, [autoPlay, currentStep]);
+
+            const nextStep = () => {
+                if (currentStep < bootSequence.length - 1) setCurrentStep(c => c + 1);
+            };
+
+            const prevStep = () => {
+                if (currentStep > 0) setCurrentStep(c => c - 1);
+            };
+
+            const reset = () => {
+                setCurrentStep(0);
+                setAutoPlay(false);
+            };
+
+            const parseTechnicalText = (text) => {
+                const parts = [];
+                const regex = new RegExp(`(${Object.keys(termDictionary).join('|')})`, 'g');
+                
+                const splitText = text.split(regex);
+
+                return splitText.map((part, index) => {
+                if (termDictionary[part]) {
+                    return (
+                    <span 
+                        key={index} 
+                        className="cursor-pointer underline decoration-dotted decoration-2 hover:bg-white hover:text-black hover:decoration-solid px-0.5 rounded transition-all"
+                        onClick={() => setModalData({ title: part, desc: termDictionary[part] })}
+                    >
+                        {part}
+                    </span>
+                    );
+                }
+                return part;
+                });
+            };
+
+            const themes = {
+                terminal: {
+                bg: "bg-black",
+                text: "text-green-400",
+                border: "border-green-800",
+                panelBg: "bg-gray-900",
+                accent: "text-green-200",
+                button: "bg-green-900 hover:bg-green-800 text-green-100",
+                highlight: "bg-green-900/30"
+                },
+                cream: {
+                bg: "bg-[#f5f5dc]", 
+                text: "text-[#5c4033]", 
+                border: "border-[#8b4513]",
+                panelBg: "bg-[#faebd7]", 
+                accent: "text-[#8b4513]",
+                button: "bg-[#deb887] hover:bg-[#d2b48c] text-[#5c4033]",
+                highlight: "bg-[#deb887]/30"
+                },
+                grayscale: {
+                bg: "bg-gray-200",
+                text: "text-gray-900",
+                border: "border-gray-400",
+                panelBg: "bg-white",
+                accent: "text-black",
+                button: "bg-gray-800 hover:bg-gray-700 text-white",
+                highlight: "bg-gray-300"
+                }
+            };
+
+            const t = themes[theme];
+
+            return (
+                <div className={`min-h-screen ${t.bg} ${t.text} font-mono p-4 md:p-8 transition-colors duration-500 flex flex-col relative`}>
+                
+                {modalData && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                    <div className={`${t.panelBg} ${t.text} border-4 ${t.border} p-6 max-w-lg w-full shadow-2xl rounded-lg relative animate-in zoom-in`}>
+                        <button 
+                        onClick={() => setModalData(null)}
+                        className="absolute top-2 right-2 p-1 hover:opacity-70"
+                        >
+                        <XIcon size={24} />
+                        </button>
+                        <h3 className="text-2xl font-bold mb-4 flex items-center gap-2 border-b-2 border-current pb-2">
+                        <Info size={24} /> {modalData.title}
+                        </h3>
+                        <p className="text-lg leading-relaxed">
+                        {modalData.desc}
+                        </p>
+                    </div>
+                    </div>
+                )}
+
+                <header className={`flex flex-col md:flex-row justify-between items-center mb-8 border-b-4 ${t.border} pb-4`}>
+                    <h1 className="text-3xl md:text-4xl font-bold uppercase tracking-widest mb-4 md:mb-0">
+                    Boot_Sim <span className="text-sm align-top opacity-70">v1.0</span>
+                    </h1>
+                    
+                    <div className="flex gap-2">
+                    <button onClick={() => setTheme('terminal')} className={`px-4 py-2 rounded font-bold ${theme === 'terminal' ? 'ring-2 ring-white' : 'opacity-50'} bg-black text-green-500`}>TERM</button>
+                    <button onClick={() => setTheme('cream')} className={`px-4 py-2 rounded font-bold ${theme === 'cream' ? 'ring-2 ring-black' : 'opacity-50'} bg-[#f5f5dc] text-[#5c4033]`}>CREAM</button>
+                    <button onClick={() => setTheme('grayscale')} className={`px-4 py-2 rounded font-bold ${theme === 'grayscale' ? 'ring-2 ring-black' : 'opacity-50'} bg-gray-300 text-black`}>GRAY</button>
+                    </div>
+                </header>
+
+                <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    
+                    <div className={`flex flex-col h-[50vh] lg:h-auto ${t.panelBg} border-4 ${t.border} rounded-lg p-4 shadow-xl overflow-hidden relative`}>
+                    <div className="absolute top-0 left-0 bg-opacity-50 w-full p-2 text-xs uppercase tracking-widest border-b border-dashed border-current opacity-50 flex justify-between">
+                        <span>System Console Output</span>
+                        <span className="animate-pulse">● LIVE</span>
+                    </div>
+                    <div className="mt-8 overflow-y-auto flex-1 font-bold text-lg md:text-xl leading-relaxed space-y-4">
+                        {bootSequence.slice(0, currentStep + 1).map((step, idx) => (
+                        <div key={idx} className={`${idx === currentStep ? 'animate-pulse' : 'opacity-60'}`}>
+                            <span className="opacity-50 mr-2 select-none">[{step.id}]</span>
+                            <span className="whitespace-pre-wrap">{parseTechnicalText(step.technical)}</span>
+                        </div>
+                        ))}
+                        <div ref={logEndRef} />
+                        {currentStep < bootSequence.length - 1 && (
+                        <div className="animate-bounce mt-4">_</div>
+                        )}
+                    </div>
+                    </div>
+
+                    <div className={`flex flex-col justify-center ${t.panelBg} border-4 ${t.border} rounded-lg p-6 md:p-10 shadow-xl transition-all duration-300`}>
+                    
+                    <div className="flex justify-between items-start mb-6 border-b-2 border-dashed border-current pb-4">
+                        <h2 className="text-2xl md:text-3xl font-bold uppercase">
+                        FASE: {bootSequence[currentStep].phase}
+                        </h2>
+                        <div className={`${t.accent}`}>
+                        {bootSequence[currentStep].icon}
+                        </div>
+                    </div>
+
+                    <div className="flex-1 flex items-center">
+                        <p className="text-xl md:text-3xl leading-relaxed font-medium">
+                        {bootSequence[currentStep].simple}
+                        </p>
+                    </div>
+
+                    <div className={`mt-6 p-4 ${t.highlight} rounded text-sm md:text-base italic border border-current`}>
+                        CONSEJO: Puedes hacer clic en los términos técnicos subrayados del panel izquierdo para ver su significado.
+                    </div>
+                    </div>
+
+                </div>
+
+                <footer className={`p-4 ${t.panelBg} border-t-4 ${t.border} rounded-lg flex flex-col items-center gap-4`}>
+                    
+                    <div className="w-full flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="w-full md:w-1/3 h-6 border-2 border-current rounded overflow-hidden relative">
+                        <div 
+                        className={`h-full ${t.text === 'text-green-400' ? 'bg-green-700' : t.text === 'text-[#5c4033]' ? 'bg-[#8b4513]' : 'bg-gray-600'} transition-all duration-500`}
+                        style={{ width: `${((currentStep) / (bootSequence.length - 1)) * 100}%` }}
+                        ></div>
+                        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold mix-blend-difference text-white">
+                        PROGRESO DEL SISTEMA
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                        <button 
+                        onClick={reset}
+                        className={`p-4 rounded-full ${t.button} shadow-lg transition-transform hover:scale-110 active:scale-95`}
+                        title="Reiniciar Sistema"
+                        >
+                        <RotateCcw size={24} />
+                        </button>
+
+                        <button 
+                        onClick={prevStep}
+                        disabled={currentStep === 0}
+                        className={`p-4 rounded-full ${t.button} shadow-lg transition-transform hover:scale-110 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed`}
+                        >
+                        <span className="font-bold text-xl">{'<'}</span>
+                        </button>
+
+                        <button 
+                        onClick={() => setAutoPlay(!autoPlay)}
+                        className={`px-8 py-4 rounded-lg font-bold text-xl uppercase tracking-wider ${autoPlay ? 'animate-pulse bg-red-800 text-white' : t.button} shadow-lg border-2 border-current`}
+                        >
+                        {autoPlay ? 'Pausar' : 'Automático'}
+                        </button>
+
+                        <button 
+                        onClick={nextStep}
+                        disabled={currentStep === bootSequence.length - 1}
+                        className={`p-4 rounded-full ${t.button} shadow-lg transition-transform hover:scale-110 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed`}
+                        >
+                        <span className="font-bold text-xl">{'>'}</span>
+                        </button>
+                    </div>
+                    </div>
+
+                    <div className="mt-4 text-sm font-bold opacity-70 uppercase tracking-widest text-center">
+                    Creado por Pascal para Sistemas Operativos en 2026
+                    </div>
+                </footer>
+
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<BootSimulator />);
+    </script>
+</body>
+</html>
