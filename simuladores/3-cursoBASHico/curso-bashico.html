@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curso BASHico :D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-color: #00ff41;
+            --dim-color: #008f11;
+            --accent-color: #0d1117;
+            --border-color: #008f11;
+            --glow: 0 0 10px rgba(0, 255, 65, 0.5);
+            --crt-opacity: 0.2;
+        }
+
+        body.theme-cream {
+            --bg-color: #fdf6e3;
+            --text-color: #586e75;
+            --dim-color: #93a1a1;
+            --accent-color: #eee8d5;
+            --border-color: #b58900;
+            --glow: none;
+            --crt-opacity: 0.05;
+        }
+
+        body.theme-gray {
+            --bg-color: #ffffff;
+            --text-color: #2d2d2d;
+            --dim-color: #767676;
+            --accent-color: #f0f0f0;
+            --border-color: #4a4a4a;
+            --glow: none;
+            --crt-opacity: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Fira Code', monospace;
+            overflow: hidden;
+            background-image: radial-gradient(var(--dim-color) 1px, transparent 1px);
+            background-size: 30px 30px;
+            transition: all 0.3s ease;
+        }
+
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            opacity: var(--crt-opacity);
+        }
+
+        .retro-border {
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 5px var(--border-color);
+        }
+
+        .neon-text {
+            text-shadow: 0 0 5px var(--border-color);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--dim-color);
+            border: 1px solid var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-color);
+        }
+
+        select {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--dim-color);
+            font-family: 'Fira Code', monospace;
+        }
+
+        textarea {
+            caret-color: var(--text-color);
+        }
+
+        .typing-cursor::after {
+            content: '█';
+            animation: blink 1s step-end infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .tab-active {
+            background-color: var(--dim-color);
+            color: var(--bg-color);
+            font-weight: bold;
+        }
+
+        .theme-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid var(--dim-color);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .theme-btn:hover { transform: scale(1.2); }
+    </style>
+</head>
+<body class="h-screen flex flex-col p-2 md:p-4 gap-4">
+
+    <div class="crt-overlay fixed inset-0 z-50"></div>
+
+    <header class="flex justify-between items-center retro-border p-3 bg-[var(--bg-color)] z-40 transition-colors">
+        <div class="flex items-center gap-3">
+            <i data-lucide="terminal" class="w-6 h-6 animate-pulse"></i>
+            <h1 class="text-xl md:text-2xl font-bold neon-text font-vt323 tracking-wider">CURSO BASHICO_v1.0</h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex gap-2 mr-4">
+                <div onclick="setTheme('retro')" class="theme-btn bg-black" title="Retro Hacker"></div>
+                <div onclick="setTheme('cream')" class="theme-btn bg-[#fdf6e3]" title="Crema Suave"></div>
+                <div onclick="setTheme('gray')" class="theme-btn bg-white" title="Escala de Grises"></div>
+            </div>
+            <span class="text-xs md:text-sm hidden md:inline opacity-70">SYSTEM: ONLINE</span>
+            <button onclick="resetAll()" class="text-red-500 hover:text-red-400 text-xs border border-red-900 px-2 py-1 hover:bg-red-900/20 transition">
+                [ RESET SYSTEM ]
+            </button>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col md:flex-row gap-4 overflow-hidden z-40">
+        
+        <div class="w-full md:w-1/3 flex flex-col retro-border bg-[var(--bg-color)] transition-colors">
+            <div class="flex border-b border-[var(--dim-color)]">
+                <button onclick="switchLeftTab('mission')" id="tab-mission" class="flex-1 py-2 text-center text-sm hover:opacity-80 transition tab-active">
+                    <i data-lucide="crosshair" class="w-3 h-3 inline mr-1"></i> MISIÓN
+                </button>
+                <button onclick="switchLeftTab('manpage')" id="tab-manpage" class="flex-1 py-2 text-center text-sm hover:opacity-80 transition">
+                    <i data-lucide="book" class="w-3 h-3 inline mr-1"></i> MAN PAGE (TEORÍA)
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 custom-scrollbar relative">
+                
+                <div class="mb-4">
+                    <label class="text-xs opacity-70 mb-1 block">SELECCIONAR NIVEL:</label>
+                    <select id="levelSelect" onchange="jumpToLevel(this.value)" class="w-full p-2 text-sm focus:outline-none focus:shadow-[0_0_10px_var(--dim-color)]">
+                    </select>
+                </div>
+
+                <div id="content-mission" class="space-y-4">
+                    <h2 id="levelTitle" class="text-lg font-bold border-b border-dashed border-[var(--dim-color)] pb-2"></h2>
+                    <p id="levelDesc" class="text-sm leading-relaxed opacity-90"></p>
+                    
+                    <div class="mt-6 space-y-2">
+                        <button onclick="toggleHint()" class="w-full text-left text-xs border border-[var(--dim-color)] p-2 hover:bg-[var(--accent-color)] transition flex items-center gap-2">
+                            <i data-lucide="help-circle" class="w-3 h-3"></i> <span id="hintBtnText">SOLICITAR PISTA (HINT)</span>
+                        </button>
+                        <div id="hintBox" class="hidden text-xs p-2 bg-[var(--accent-color)] border-l-2 border-[var(--text-color)]"></div>
+
+                        <button onclick="toggleSolution()" class="w-full text-left text-xs border border-[var(--dim-color)] p-2 hover:bg-[var(--accent-color)] transition flex items-center gap-2 opacity-80">
+                            <i data-lucide="key" class="w-3 h-3"></i> <span id="solBtnText">ACCEDER A SOLUCIÓN (CHEAT)</span>
+                        </button>
+                        <div id="solutionBox" class="hidden text-xs p-2 bg-[var(--accent-color)] border-l-2 border-yellow-500 font-mono select-all"></div>
+                    </div>
+                </div>
+
+                <div id="content-manpage" class="hidden space-y-4">
+                    <div class="text-xs opacity-50 mb-2">MANUAL DE REFERENCIA BASH</div>
+                    <div id="manContent" class="text-sm leading-relaxed space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full md:w-2/3 flex flex-col gap-4">
+            
+            <div class="flex-1 retro-border bg-[var(--bg-color)] flex flex-col relative transition-colors">
+                <div class="bg-[var(--accent-color)] p-1 px-3 text-xs flex justify-between items-center border-b border-[var(--dim-color)] opacity-80">
+                    <span>nano script.sh</span>
+                    <span>BASH SCRIPT</span>
+                </div>
+                <div class="flex-1 relative flex">
+                    <div id="lineNumbers" class="w-8 pt-4 text-right pr-2 text-[var(--dim-color)] text-sm select-none font-mono bg-[var(--accent-color)] opacity-50">1</div>
+                    <textarea id="codeEditor" oninput="updateEditor()" class="flex-1 bg-transparent border-none focus:ring-0 p-4 font-mono text-sm resize-none focus:outline-none leading-relaxed text-[var(--text-color)]" spellcheck="false"></textarea>
+                </div>
+            </div>
+
+            <div class="h-1/3 retro-border bg-[var(--bg-color)] flex flex-col transition-colors">
+                <div class="bg-[var(--accent-color)] p-1 px-3 text-xs border-b border-[var(--dim-color)] flex justify-between opacity-80">
+                    <span>root@kali:~/curso_bash#</span>
+                    <span id="statusIndicator" class="opacity-50">IDLE</span>
+                </div>
+                <div id="consoleOutput" class="flex-1 p-3 font-mono text-xs overflow-y-auto custom-scrollbar">
+                    <div class="opacity-50">Esperando ejecución...</div>
+                </div>
+                <div class="p-2 border-t border-[var(--dim-color)]">
+                    <button onclick="runScript()" class="w-full bg-[var(--dim-color)] hover:opacity-80 text-[var(--bg-color)] py-2 text-sm font-bold tracking-widest border border-[var(--border-color)] transition uppercase">
+                        ./EJECUTAR_SCRIPT.SH
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="successModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-[var(--bg-color)] border-2 border-[var(--border-color)] p-8 max-w-md w-full shadow-[0_0_30px_var(--dim-color)] text-center transform scale-100 transition-transform">
+            <h2 class="text-3xl font-bold mb-4 font-vt323 neon-text">¡MISIÓN CUMPLIDA!</h2>
+            <div class="text-4xl mb-6">💾</div>
+            <p class="mb-6 text-sm">El sistema ha aceptado tu código. Procediendo al siguiente nivel de seguridad.</p>
+            <button onclick="nextLevel()" class="px-6 py-2 bg-[var(--dim-color)] hover:opacity-80 text-[var(--bg-color)] font-bold uppercase tracking-wider">
+                SIGUIENTE NIVEL >>
+            </button>
+        </div>
+    </div>
+
+    <div id="introModal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 backdrop-blur-md">
+        <div class="bg-[var(--bg-color)] border-2 border-[var(--border-color)] p-8 max-w-2xl w-full shadow-[0_0_50px_var(--dim-color)] relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-[var(--text-color)] animate-pulse"></div>
+            <h1 class="text-4xl font-bold mb-6 font-vt323 neon-text text-center">MI BIENVENIDA A BASH</h1>
+            
+            <div class="space-y-6 text-sm leading-relaxed">
+                <div>
+                    <h3 class="text-lg font-bold border-b border-[var(--dim-color)] mb-2 text-[var(--dim-color)]">> ¿QUÉ ES BASH?</h3>
+                    <p>BASH (Bourne Again SHell) es un intérprete de comandos. Es el lenguaje nativo que usas para comunicarte directamente con el núcleo (kernel) de sistemas Linux y Unix.</p>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold border-b border-[var(--dim-color)] mb-2 text-[var(--dim-color)]">> CONSOLA VS SCRIPTING</h3>
+                    <p>La <strong>Consola</strong> es interactiva: escribes un comando, pulsas Enter y ves el resultado. <br>
+                    El <strong>Scripting</strong> (lo que aprenderás aquí) consiste en escribir un archivo de texto con una secuencia lógica de comandos para que el ordenador los ejecute automáticamente. Es programación real.</p>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold border-b border-[var(--dim-color)] mb-2 text-[var(--dim-color)]">> ¿POR QUÉ APRENDERLO?</h3>
+                    <ul class="list-disc list-inside space-y-1 opacity-90">
+                        <li>Es el estándar en servidores de todo el mundo.</li>
+                        <li>Fundamental para <strong>ASR</strong>.</li>
+                        <li>Base de la automatización, DevOps y Ciberseguridad.</li>
+                        <li>Si sabes BASH, puedes controlar cualquier servidor sin interfaz gráfica.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <button onclick="closeIntro()" class="mt-8 w-full py-3 bg-[var(--text-color)] text-[var(--bg-color)] font-bold text-lg hover:opacity-90 transition font-vt323 tracking-widest">
+                [ INICIAR ENTRENAMIENTO ]
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const levels = [
+            {
+                id: 1,
+                title: "Hola Mundo (Echo)",
+                desc: "Bienvenido, recluta. Tu primera tarea es comunicarte con el sistema. Usa el comando ``echo`` para imprimir 'Hola Mundo' en la terminal.",
+                man: "<strong>echo</strong>: Comando básico para imprimir texto en la salida estándar (pantalla).<br>Sintaxis: <code>echo 'Texto'</code> o <code>echo \"Texto\"</code>.",
+                init: "# Escribe tu código aquí\n",
+                sol: "echo \"Hola Mundo\"",
+                hint: "Simplemente escribe: echo \"Hola Mundo\"",
+                check: (c) => /echo\s+["']Hola Mundo["']/.test(c),
+                out: "Hola Mundo"
+            },
+            {
+                id: 2,
+                title: "El Shebang",
+                desc: "Todo script serio debe indicar qué intérprete usar. Añade la línea 'shebang' al principio del archivo para especificar BASH: ``#!/bin/bash``.",
+                man: "<strong>Shebang (#!):</strong> Son los dos primeros bytes de un archivo. Le dicen al sistema operativo qué programa usar para leer el resto del archivo.<br>Para bash es siempre: <code>#!/bin/bash</code>",
+                init: "\necho \"Sistema listo\"",
+                sol: "#!/bin/bash\necho \"Sistema listo\"",
+                hint: "Escríbelo en la PRIMERA línea, sin espacios antes.",
+                check: (c) => c.trim().startsWith("#!/bin/bash"),
+                out: "Sistema listo"
+            },
+            {
+                id: 3,
+                title: "Variables",
+                desc: "Declara una variable llamada ``AGENTE`` y asígnale el valor ``007`` (sin espacios alrededor del igual).",
+                man: "<strong>Variables:</strong> Cajas para guardar datos. En BASH, NO se ponen espacios alrededor del <code>=</code>.<br>Mal: <code>VAR = valor</code><br>Bien: <code>VAR=valor</code>",
+                init: "#!/bin/bash\n# Declara la variable abajo\n\n",
+                sol: "AGENTE=007",
+                hint: "Escribe: AGENTE=007",
+                check: (c) => /AGENTE=007/.test(c),
+                out: ""
+            },
+            {
+                id: 4,
+                title: "Usar Variables ($)",
+                desc: "Ahora que tenemos la variable ``AGENTE``, imprímela usando ``echo``. Para acceder al valor, debes poner un ``$`` delante del nombre.",
+                man: "<strong>Referenciar ($):</strong> Para asignar NO usamos dólar. Para leer SÍ usamos dólar.<br><code>echo $VAR</code>",
+                init: "#!/bin/bash\nAGENTE=007\n# Imprime la variable\n",
+                sol: "echo $AGENTE",
+                hint: "Usa: echo $AGENTE",
+                check: (c) => /echo\s+\$AGENTE/.test(c),
+                out: "007"
+            },
+            {
+                id: 5,
+                title: "Comentarios",
+                desc: "El código debe ser legible. Añade un comentario que diga ``# Mision Secreta``.",
+                man: "<strong>Comentarios (#):</strong> Todo lo que sigue a una almohadilla <code>#</code> es ignorado por BASH. Útil para notas.",
+                init: "#!/bin/bash\n",
+                sol: "# Mision Secreta",
+                hint: "Simplemente escribe la almohadilla seguida del texto.",
+                check: (c) => /#\s*Mision Secreta/i.test(c),
+                out: ""
+            },
+            {
+                id: 6,
+                title: "Entrecomillado Doble vs Simple",
+                desc: "Las comillas dobles permiten usar variables dentro. Las simples NO. Define ``NOMBRE=Neo`` e imprime ``\"Hola $NOMBRE\"``.",
+                man: "<strong>\" \" (Soft quotes):</strong> Expanden variables ($VAR se convierte en su valor).<br><strong>' ' (Hard quotes):</strong> Literales ($VAR se imprime tal cual).",
+                init: "#!/bin/bash\nNOMBRE=Neo\n# Imprime con comillas dobles\n",
+                sol: "echo \"Hola $NOMBRE\"",
+                hint: "Usa comillas dobles: echo \"Hola $NOMBRE\"",
+                check: (c) => /echo\s+"Hola\s+\$NOMBRE"/.test(c),
+                out: "Hola Neo"
+            },
+            {
+                id: 7,
+                title: "Input de Usuario (read)",
+                desc: "Haz un script interactivo. Usa el comando ``read`` para guardar lo que escribe el usuario en la variable ``PASSWORD``.",
+                man: "<strong>read:</strong> Detiene el script y espera a que el usuario escriba algo. Lo guarda en la variable indicada.<br>Uso: <code>read NOMBRE_VARIABLE</code>",
+                init: "#!/bin/bash\necho \"Introduce password:\"\n# Usa read aquí\n",
+                sol: "read PASSWORD",
+                hint: "Solo escribe: read PASSWORD",
+                check: (c) => /read\s+PASSWORD/.test(c),
+                out: "Introduce password:\n[Esperando entrada... ok]"
+            },
+            {
+                id: 8,
+                title: "Aritmética Básica (expr)",
+                desc: "BASH es antiguo. Para sumar, a veces se usa ``expr``. Calcula la suma de 5 + 5 usando ``expr 5 + 5`` (ojo con los espacios).",
+                man: "<strong>expr:</strong> Herramienta antigua para matemáticas. Requiere espacios entre operadores.<br><code>expr 1 + 1</code> funciona.<br><code>expr 1+1</code> falla.",
+                init: "#!/bin/bash\n# Suma 5 y 5\n",
+                sol: "expr 5 + 5",
+                hint: "Asegúrate de poner espacios alrededor del más.",
+                check: (c) => /expr\s+5\s+\+\s+5/.test(c),
+                out: "10"
+            },
+            {
+                id: 9,
+                title: "Aritmética Moderna $((...))",
+                desc: "La forma moderna es usar doble paréntesis. Calcula 10 * 2 usando ``echo $((10 * 2))``.",
+                man: "<strong>$(( ... )):</strong> Expansión aritmética. Es la forma preferida hoy día. No necesita espacios estrictos.",
+                init: "#!/bin/bash\n",
+                sol: "echo $((10 * 2))",
+                hint: "Encierra la operación en $(( ... ))",
+                check: (c) => /echo\s+\$\(\(\s*10\s*\*\s*2\s*\)\)/.test(c),
+                out: "20"
+            },
+            {
+                id: 10,
+                title: "Variables de Entorno (env)",
+                desc: "Hay variables que el sistema te da gratis, como ``$USER`` o ``$HOME``. Imprime el directorio personal usando ``echo $HOME``.",
+                man: "<strong>Env Vars:</strong> Variables globales definidas por el sistema operativo. $PATH, $USER, $PWD, $HOME son las más comunes.",
+                init: "#!/bin/bash\n",
+                sol: "echo $HOME",
+                hint: "Solo imprime $HOME",
+                check: (c) => /echo\s+\$HOME/.test(c),
+                out: "/home/hacker"
+            },
+            {
+                id: 11,
+                title: "Condicional IF Básico",
+                desc: "Si pasa esto, haz aquello. Escribe una estructura ``if`` vacía que compruebe algo y termine con ``fi``.",
+                man: "<strong>if:</strong><br><code>if [ condicion ]; then</code><br><code>  comando</code><br><code>fi</code><br>Los espacios dentro de los corchetes <code>[ ]</code> son OBLIGATORIOS.",
+                init: "#!/bin/bash\nif [ 1 -eq 1 ]; then\n    echo \"Verdad\"\n# Cierra el if\n",
+                sol: "fi",
+                hint: "El bloque if termina con 'fi' (if al revés).",
+                check: (c) => /fi\s*$/.test(c.trim()),
+                out: "Verdad"
+            },
+            {
+                id: 12,
+                title: "Comparar Números (-eq)",
+                desc: "En BASH, ``=`` es para strings. Para números usamos flags. Comprueba si 5 es igual a 5 usando ``-eq`` dentro de los corchetes.",
+                man: "<strong>Operadores Numéricos:</strong><br><code>-eq</code>: Equal (Igual)<br><code>-ne</code>: Not Equal (Distinto)<br><code>-gt</code>: Greater Than (Mayor)<br><code>-lt</code>: Less Than (Menor)",
+                init: "#!/bin/bash\nif [ 5 ___ 5 ]; then\n    echo \"Iguales\"\nfi",
+                sol: "-eq",
+                hint: "Sustituye los guiones bajos por -eq",
+                check: (c) => /\[\s*5\s+-eq\s+5\s*\]/.test(c),
+                out: "Iguales"
+            },
+            {
+                id: 13,
+                title: "Comparar Strings (=)",
+                desc: "Para texto sí usamos ``=`` o ``==``. Comprueba si ``$USER`` es igual a \"root\".",
+                man: "<strong>Comparación Strings:</strong><br><code>[ \"$A\" = \"$B\" ]</code><br>Siempre es recomendable poner comillas a las variables por si están vacías.",
+                init: "#!/bin/bash\nif [ \"$USER\" = \"root\" ]; then\n    echo \"Hola Admin\"\nfi",
+                sol: "if [ \"$USER\" = \"root\" ]; then",
+                hint: "Usa el operador = dentro de [ ]",
+                check: (c) => /\[\s*"\$USER"\s*=\s*"root"\s*\]/.test(c),
+                out: "(Sin salida, no eres root)"
+            },
+            {
+                id: 14,
+                title: "Else (Si no...)",
+                desc: "Añade un bloque ``else`` para imprimir \"Acceso Denegado\" si la condición falla.",
+                man: "<strong>else:</strong> Se pone entre el <code>then</code> y el <code>fi</code>.",
+                init: "#!/bin/bash\nif [ \"$1\" = \"secreto\" ]; then\n    echo \"Bienvenido\"\n    # Añade else aquí\n\nfi",
+                sol: "else\n    echo \"Acceso Denegado\"",
+                hint: "Escribe 'else' y luego el echo en la siguiente línea.",
+                check: (c) => /else/.test(c) && /echo\s+["']Acceso Denegado["']/.test(c),
+                out: "Acceso Denegado"
+            },
+            {
+                id: 15,
+                title: "Comprobar Archivos (-f)",
+                desc: "Podemos preguntar al sistema si un archivo existe. Usa ``-f \"archivo.txt\"`` dentro del if.",
+                man: "<strong>File Tests:</strong><br><code>-f</code>: Existe y es fichero regular.<br><code>-d</code>: Existe y es directorio.<br><code>-e</code>: Existe (lo que sea).",
+                init: "#!/bin/bash\nif [ ___ \"config.cfg\" ]; then\n    echo \"Existe\"\nfi",
+                sol: "-f",
+                hint: "Usa el flag -f",
+                check: (c) => /\[\s*-f\s+["']config.cfg["']\s*\]/.test(c),
+                out: "Existe"
+            },
+            {
+                id: 16,
+                title: "Comprobar Directorios (-d)",
+                desc: "Verifica si ``/tmp`` es un directorio usando ``-d``.",
+                man: "<strong>-d:</strong> Devuelve verdadero si la ruta es una carpeta.",
+                init: "#!/bin/bash\nif [ -d \"/tmp\" ]; then\n    echo \"Es carpeta\"\nfi",
+                sol: "[ -d \"/tmp\" ]",
+                hint: "Asegúrate de que el código tenga [ -d \"/tmp\" ]",
+                check: (c) => /\[\s*-d\s+["']\/tmp["']\s*\]/.test(c),
+                out: "Es carpeta"
+            },
+            {
+                id: 17,
+                title: "Negación (!)",
+                desc: "A veces queremos saber si algo NO es verdad. Usa ``!`` antes de la condición. ``if [ ! -f \"virus.exe\" ]; ...``",
+                man: "<strong>! (Not):</strong> Invierte el resultado de la prueba.",
+                init: "#!/bin/bash\n# Si NO existe virus.exe\nif [ ___ -f \"virus.exe\" ]; then\n    echo \"Seguro\"\nfi",
+                sol: "!",
+                hint: "Pon un signo de exclamación y un espacio antes del -f.",
+                check: (c) => /\[\s*!\s+-f/.test(c),
+                out: "Seguro"
+            },
+            {
+                id: 18,
+                title: "AND Lógico (&&)",
+                desc: "Podemos encadenar comandos. ``mkdir carpeta && cd carpeta``. El segundo solo se ejecuta si el primero tiene éxito.",
+                man: "<strong>&& (AND):</strong> Ejecuta el comando de la derecha solo si el de la izquierda terminó sin errores (exit code 0).",
+                init: "#!/bin/bash\n# Crea 'backup' y entra en él\n",
+                sol: "mkdir backup && cd backup",
+                hint: "comando1 && comando2",
+                check: (c) => /mkdir\s+backup\s*&&\s*cd\s+backup/.test(c),
+                out: ""
+            },
+            {
+                id: 19,
+                title: "OR Lógico (||)",
+                desc: "Ejecuta el segundo solo si el primero FALLA. ``cat archivo || echo \"Error\"``.",
+                man: "<strong>|| (OR):</strong> Útil para manejo de errores. \"Intenta esto, O haz esto otro si fallas\".",
+                init: "#!/bin/bash\n# Intenta leer 'fantasma.txt' o imprime Error\n",
+                sol: "cat fantasma.txt || echo \"Error\"",
+                hint: "comando || echo ...",
+                check: (c) => /\|\|\s*echo/.test(c),
+                out: "Error"
+            },
+            {
+                id: 20,
+                title: "Elif (Else If)",
+                desc: "Para múltiples condiciones encadenadas usamos ``elif``. Crea una estructura if-elif-else.",
+                man: "<strong>elif:</strong> Abreviatura de 'else if'. Permite probar otra condición si la primera falló.",
+                init: "#!/bin/bash\nEDAD=15\nif [ $EDAD -gt 18 ]; then\n    echo \"Adulto\"\n___ [ $EDAD -gt 12 ]; then\n    echo \"Adolescente\"\nfi",
+                sol: "elif",
+                hint: "Sustituye la línea por elif [ ... ]; then",
+                check: (c) => /elif\s*\[/.test(c),
+                out: "Adolescente"
+            },
+            {
+                id: 21,
+                title: "Bucle For (Lista)",
+                desc: "Itera sobre una lista de palabras. ``for COLOR in rojo verde azul; do ... done``.",
+                man: "<strong>For (Lista):</strong> Recorre cada elemento de la lista y lo asigna a la variable. Termina con <code>done</code>.",
+                init: "#!/bin/bash\nfor I in 1 2 3; do\n    echo $I\n____",
+                sol: "done",
+                hint: "Cierra el bucle con 'done'.",
+                check: (c) => /done/.test(c),
+                out: "1\n2\n3"
+            },
+            {
+                id: 22,
+                title: "Bucle For (Rango)",
+                desc: "Podemos generar rangos con llaves. ``{1..5}``. Crea un bucle que imprima del 1 al 5.",
+                man: "<strong>Rangos:</strong> <code>{inicio..fin}</code> expande a una secuencia de números o letras.",
+                init: "#!/bin/bash\nfor N in {1..5}; do\n    echo $N\ndone",
+                sol: "{1..5}",
+                hint: "Asegúrate de usar {1..5}",
+                check: (c) => /\{1\.\.5\}/.test(c),
+                out: "1\n2\n3\n4\n5"
+            },
+            {
+                id: 23,
+                title: "Bucle For (C-Style)",
+                desc: "BASH también admite bucles estilo C: ``for ((i=0; i<3; i++)); do ...``.",
+                man: "<strong>Estilo C:</strong> Doble paréntesis. Útil cuando necesitas índices numéricos precisos.",
+                init: "#!/bin/bash\n# Bucle C-style\n",
+                sol: "for ((i=0; i<3; i++)); do echo $i; done",
+                hint: "for ((...)); do",
+                check: (c) => /for\s*\(\(/.test(c),
+                out: "0\n1\n2"
+            },
+            {
+                id: 24,
+                title: "While Loop",
+                desc: "Ejecuta MIENTRAS la condición sea cierta. Haz un bucle while que pare cuando CONTADOR sea 3. No olvides incrementar.",
+                man: "<strong>while:</strong> Cuidado con los bucles infinitos. Siempre debes modificar la variable de control dentro.",
+                init: "#!/bin/bash\nC=0\nwhile [ $C -lt 3 ]; do\n    echo $C\n    # Incrementa C aquí\n    C=$((C+1))\ndone",
+                sol: "C=$((C+1))",
+                hint: "Ya te he dado la línea, solo asegúrate de que esté ahí.",
+                check: (c) => /C=\$\(\(\s*C\s*\+\s*1\s*\)\)/.test(c) || /let\s+C\+\+/.test(c),
+                out: "0\n1\n2"
+            },
+            {
+                id: 25,
+                title: "Until Loop",
+                desc: "Lo contrario a while. Ejecuta HASTA que la condición sea cierta. ``until [ $A -eq 5 ]; ...``.",
+                man: "<strong>until:</strong> Ejecuta mientras la condición sea FALSA.",
+                init: "#!/bin/bash\nA=0\nuntil [ $A -eq 2 ]; do\n    echo $A\n    A=$((A+1))\ndone",
+                sol: "until",
+                hint: "Usa until en lugar de while.",
+                check: (c) => /until\s*\[/.test(c),
+                out: "0\n1"
+            },
+            {
+                id: 26,
+                title: "Break (Romper)",
+                desc: "Sal del bucle prematuramente si se cumple una condición.",
+                man: "<strong>break:</strong> Aborta el bucle inmediatamente.",
+                init: "#!/bin/bash\nfor N in {1..10}; do\n    if [ $N -eq 3 ]; then\n        break\n    fi\n    echo $N\ndone",
+                sol: "break",
+                hint: "Escribe 'break' dentro del if.",
+                check: (c) => /break/.test(c),
+                out: "1\n2"
+            },
+            {
+                id: 27,
+                title: "Continue (Saltar)",
+                desc: "Salta a la siguiente iteración sin terminar la actual.",
+                man: "<strong>continue:</strong> Ignora el resto del código del bucle por esta vez y vuelve arriba.",
+                init: "#!/bin/bash\nfor N in 1 2 3; do\n    if [ $N -eq 2 ]; then\n        continue\n    fi\n    echo $N\ndone",
+                sol: "continue",
+                hint: "Escribe 'continue' dentro del if.",
+                check: (c) => /continue/.test(c),
+                out: "1\n3"
+            },
+            {
+                id: 28,
+                title: "Recorrer Archivos (*)",
+                desc: "El comodín ``*`` expande a todos los archivos. Haz ``for FILE in *.txt``.",
+                man: "<strong>Globbing (*):</strong> El asterisco es sustituido por los nombres de archivos que coincidan.",
+                init: "#!/bin/bash\n# Recorre todos los .txt\nfor F in *.txt; do\n    echo \"Archivo: $F\"\ndone",
+                sol: "*.txt",
+                hint: "Usa el patrón *.txt",
+                check: (c) => /\*\.txt/.test(c),
+                out: "Archivo: nota.txt\nArchivo: lista.txt"
+            },
+            {
+                id: 29,
+                title: "While Read File",
+                desc: "La forma clásica de leer un archivo línea por línea: ``while read LINE; do ... done < archivo.txt``.",
+                man: "<strong>Leer archivos:</strong> Redireccionamos el archivo al bucle con <code><</code>.",
+                init: "#!/bin/bash\nwhile read LINE; do\n    echo $LINE\ndone < datos.txt",
+                sol: "< datos.txt",
+                hint: "Asegúrate de poner < datos.txt al final del done.",
+                check: (c) => /done\s*<\s*datos\.txt/.test(c),
+                out: "Linea 1\nLinea 2"
+            },
+            {
+                id: 30,
+                title: "Select (Menú)",
+                desc: "BASH tiene una forma fácil de hacer menús: ``select OPCION in A B C; do ... done``.",
+                man: "<strong>select:</strong> Crea un menú numerado automáticamente. El usuario elige un número.",
+                init: "#!/bin/bash\nselect FRUTA in Manzana Pera; do\n    echo \"Elegiste $FRUTA\"\n    break\ndone",
+                sol: "select",
+                hint: "Usa select ... in ...",
+                check: (c) => /select\s+\w+\s+in/.test(c),
+                out: "1) Manzana\n2) Pera\n#? "
+            },
+            {
+                id: 31,
+                title: "Argumentos del Script ($1)",
+                desc: "Al ejecutar ``./script.sh hola``, el 'hola' es ``$1``. Imprime el primer argumento.",
+                man: "<strong>$1, $2...:</strong> Argumentos posicionales pasados al script.",
+                init: "#!/bin/bash\necho \"El primer argumento es: $1\"",
+                sol: "echo $1",
+                hint: "Imprime $1",
+                check: (c) => /echo.*\$1/.test(c),
+                out: "El primer argumento es: (vacio)"
+            },
+            {
+                id: 32,
+                title: "Contar Argumentos ($#)",
+                desc: "``$#`` guarda el número total de argumentos recibidos.",
+                man: "<strong>$#:</strong> Número de argumentos. Útil para verificar si el usuario pasó los datos necesarios.",
+                init: "#!/bin/bash\necho \"Recibí $# argumentos\"",
+                sol: "$#",
+                hint: "Usa $#",
+                check: (c) => /\$#/.test(c),
+                out: "Recibí 0 argumentos"
+            },
+            {
+                id: 33,
+                title: "Todos los Argumentos ($@)",
+                desc: "``$@`` representa la lista completa de argumentos.",
+                man: "<strong>$@:</strong> Todos los argumentos como una lista. Ideal para iterar con <code>for arg in \"$@\"</code>.",
+                init: "#!/bin/bash\nfor ARG in \"$@\"; do\n    echo $ARG\ndone",
+                sol: "$@",
+                hint: "Usa \"$@\"",
+                check: (c) => /"\$@"/.test(c),
+                out: ""
+            },
+            {
+                id: 34,
+                title: "Nombre del Script ($0)",
+                desc: "``$0`` es el nombre del propio archivo que se está ejecutando.",
+                man: "<strong>$0:</strong> El nombre del comando/script actual.",
+                init: "#!/bin/bash\necho \"Me llamo $0\"",
+                sol: "$0",
+                hint: "Imprime $0",
+                check: (c) => /\$0/.test(c),
+                out: "Me llamo ./script.sh"
+            },
+            {
+                id: 35,
+                title: "Funciones Básicas",
+                desc: "Define una función: ``mi_funcion() { ... }`` y llámala abajo.",
+                man: "<strong>Funciones:</strong> Bloques de código reutilizables. No llevan paréntesis al llamarlas.",
+                init: "#!/bin/bash\nsaludar() {\n    echo \"Hola\"\n}\n\n# Llama a la función\nsaludar",
+                sol: "saludar",
+                hint: "Escribe el nombre de la función 'saludar' sin paréntesis para ejecutarla.",
+                check: (c) => /saludar\s*\(\)\s*\{/.test(c) && /\nsaludar/.test(c),
+                out: "Hola"
+            },
+            {
+                id: 36,
+                title: "Argumentos de Función",
+                desc: "Las funciones tienen sus propios ``$1``, ``$2``. No heredan los del script principal directamente.",
+                man: "<strong>Scope:</strong> Dentro de una función, $1 es el primer argumento pasado A LA FUNCIÓN, no al script.",
+                init: "#!/bin/bash\nsuma() {\n    echo $(($1 + $2))\n}\nsuma 2 3",
+                sol: "suma 2 3",
+                hint: "Llama a 'suma' seguido de dos números.",
+                check: (c) => /suma\s+\d+\s+\d+/.test(c),
+                out: "5"
+            },
+            {
+                id: 37,
+                title: "Variables Locales",
+                desc: "Usa ``local VAR=val`` dentro de funciones para no ensuciar el resto del script.",
+                man: "<strong>local:</strong> Limita el alcance de la variable a la función actual.",
+                init: "#!/bin/bash\nfunc() {\n    local SECRETO=123\n}\nfunc\necho $SECRETO",
+                sol: "local",
+                hint: "Declara local SECRETO=...",
+                check: (c) => /local\s+SECRETO/.test(c),
+                out: "(vacio, porque es local)"
+            },
+            {
+                id: 38,
+                title: "Exit Codes ($?)",
+                desc: "Cada comando devuelve un código al terminar. 0 es éxito, >0 es error. Se guarda en ``$?``. Intenta hacer ``ls archivo_fake`` y luego ``echo $?``.",
+                man: "<strong>$?:</strong> Exit status del último comando ejecutado.",
+                init: "#!/bin/bash\nls no_existo\necho \"Codigo: $?\"",
+                sol: "echo $?",
+                hint: "Imprime $?",
+                check: (c) => /echo.*\$?/.test(c),
+                out: "ls: no_existo: No such file\nCodigo: 2"
+            },
+            {
+                id: 39,
+                title: "Return en Funciones",
+                desc: "Las funciones no devuelven datos con return, devuelven estados (exit codes). return 0 es bueno.",
+                man: "<strong>return:</strong> Sale de la función y establece el $? (0-255).",
+                init: "#!/bin/bash\ntest() {\n    return 5\n}\ntest\necho $?",
+                sol: "return 5",
+                hint: "Usa return con un número.",
+                check: (c) => /return\s+\d+/.test(c),
+                out: "5"
+            },
+            {
+                id: 40,
+                title: "Command Substitution $()",
+                desc: "Para guardar la SALIDA de un comando en una variable, usa ``VAR=$(comando)``.",
+                man: "<strong>$():</strong> Ejecuta el comando y reemplaza el texto con su salida. Antiguamente se usaban backticks ` `.",
+                init: "#!/bin/bash\nFECHA=$(date)\necho $FECHA",
+                sol: "$(date)",
+                hint: "Usa $(date)",
+                check: (c) => /\$\(date\)/.test(c),
+                out: "Lun Ene 26 ..."
+            },
+            {
+                id: 41,
+                title: "Pipes (|)",
+                desc: "La herramienta más potente. Pasa la salida de un comando a la entrada de otro. ``ls | grep txt``.",
+                man: "<strong>| (Tubería):</strong> Conecta procesos.",
+                init: "#!/bin/bash\n# Lista y filtra\nls -l | grep \".sh\"",
+                sol: "|",
+                hint: "Usa el caracter barra vertical |",
+                check: (c) => /\|\s*grep/.test(c),
+                out: "script.sh"
+            },
+            {
+                id: 42,
+                title: "Redirección Output (>)",
+                desc: "Guarda la salida en un archivo (sobrescribe). ``echo \"Hola\" > log.txt``.",
+                man: "<strong>>:</strong> Redirección destructiva. Crea o sobrescribe el archivo.",
+                init: "#!/bin/bash\necho \"Log\" > archivo.txt",
+                sol: ">",
+                hint: "Usa el mayor que >",
+                check: (c) => />\s*[\w\.]+/.test(c),
+                out: "(Archivo creado)"
+            },
+            {
+                id: 43,
+                title: "Redirección Append (>>)",
+                desc: "Añade al final del archivo sin borrar. ``echo \"Línea 2\" >> log.txt``.",
+                man: "<strong>>>:</strong> Append. Agrega al final.",
+                init: "#!/bin/bash\necho \"Mas\" >> archivo.txt",
+                sol: ">>",
+                hint: "Doble mayor que >>",
+                check: (c) => />>\s*[\w\.]+/.test(c),
+                out: "(Texto añadido)"
+            },
+            {
+                id: 44,
+                title: "Grep (Búsqueda)",
+                desc: "Busca texto dentro de archivos. ``grep \"Error\" log.txt``.",
+                man: "<strong>grep:</strong> Global Regular Expression Print. El buscador por excelencia.",
+                init: "#!/bin/bash\ngrep \"root\" /etc/passwd",
+                sol: "grep",
+                hint: "Usa grep seguido del patrón y el archivo.",
+                check: (c) => /grep\s+["'].*["']\s+[\w\/]+/.test(c),
+                out: "root:x:0:0:root:/root:/bin/bash"
+            },
+            {
+                id: 45,
+                title: "Cut (Cortar columnas)",
+                desc: "Extrae partes de líneas. ``cut -d \":\" -f 1`` corta usando ':' como separador y coge el campo 1.",
+                man: "<strong>cut:</strong> Corta texto verticalmente.",
+                init: "#!/bin/bash\necho \"root:x:0:0\" | cut -d \":\" -f 1",
+                sol: "cut",
+                hint: "Usa cut con -d y -f",
+                check: (c) => /cut\s+-d\s*["']:["']\s+-f/.test(c),
+                out: "root"
+            },
+            {
+                id: 46,
+                title: "Sed (Sustituir)",
+                desc: "Stream Editor. Sustituye texto al vuelo: ``sed 's/hola/adios/'``.",
+                man: "<strong>sed:</strong> 's' es sustituir. Sintaxis: <code>s/BUSCAR/REEMPLAZAR/</code>.",
+                init: "#!/bin/bash\necho \"Hola Mundo\" | sed 's/Mundo/BASH/'",
+                sol: "sed",
+                hint: "sed 's/Viejo/Nuevo/'",
+                check: (c) => /sed\s+['"]s\/.*\/.*\/['"]/.test(c),
+                out: "Hola BASH"
+            },
+            {
+                id: 47,
+                title: "Awk (Básico)",
+                desc: "Potente procesador. Imprime la segunda columna: ``awk '{print $2}'``.",
+                man: "<strong>awk:</strong> Un lenguaje en sí mismo. Por defecto separa por espacios.",
+                init: "#!/bin/bash\necho \"A B C\" | awk '{print $2}'",
+                sol: "awk",
+                hint: "awk '{print $2}'",
+                check: (c) => /awk\s+['"]\{print\s+\$\d+\}['"]/.test(c),
+                out: "B"
+            },
+            {
+                id: 48,
+                title: "Case Statement",
+                desc: "Como un switch pero más potente. ``case $VAR in ... esac``.",
+                man: "<strong>case:</strong> Estructura de control para múltiples opciones. Termina con doble punto y coma <code>;;</code>.",
+                init: "#!/bin/bash\nOPCION=\"A\"\ncase $OPCION in\n    \"A\") echo \"Letra A\" ;;\n    \"B\") echo \"Letra B\" ;;\nesac",
+                sol: "case",
+                hint: "case ... in ... esac",
+                check: (c) => /case\s+\$.+\s+in/.test(c) && /esac/.test(c),
+                out: "Letra A"
+            },
+            {
+                id: 49,
+                title: "Arrays",
+                desc: "Listas de datos. Declaración: ``LISTA=(uno dos tres)``. Acceso: ``${LISTA[0]}``.",
+                man: "<strong>Arrays:</strong> Se usan paréntesis para declarar y llaves para acceder.",
+                init: "#!/bin/bash\nLISTA=(A B C)\necho ${LISTA[1]}",
+                sol: "${LISTA[1]}",
+                hint: "Usa llaves y corchetes: ${VAR[index]}",
+                check: (c) => /\$\{\w+\[\d+\]\}/.test(c),
+                out: "B"
+            },
+            {
+                id: 50,
+                title: "Graduación BASH",
+                desc: "Has sobrevivido. Crea un script que use un ``for``, un ``if`` y ``echo`` para despedirte.",
+                man: "<strong>FIN:</strong> Combina lo aprendido.",
+                init: "#!/bin/bash\n# Tu obra maestra final\n",
+                sol: "Libre",
+                hint: "Sorpréndeme.",
+                check: (c) => /for/.test(c) && /if/.test(c) && /echo/.test(c),
+                out: "🎓 CERTIFICADO BASH OTORGADO 🎓"
+            }
+        ];
+
+        let currentLevel = 0;
+        const editor = document.getElementById('codeEditor');
+        const output = document.getElementById('consoleOutput');
+        const levelSelect = document.getElementById('levelSelect');
+        const lineNumbers = document.getElementById('lineNumbers');
+
+        function init() {
+            lucide.createIcons();
+            populateLevelSelect();
+            loadProgress();
+            loadLevel(currentLevel);
+            
+            if (currentLevel === 0) {
+                document.getElementById('introModal').classList.remove('hidden');
+            }
+        }
+
+        function loadLevel(index) {
+            currentLevel = index;
+            const lvl = levels[index];
+            
+            document.getElementById('levelTitle').innerText = `NIVEL ${lvl.id}: ${lvl.title}`;
+            document.getElementById('levelDesc').innerHTML = lvl.desc.replace(/``(.*?)``/g, '<code class="bg-[var(--accent-color)] px-1 border border-[var(--dim-color)] text-[var(--text-color)] font-bold">$1</code>');
+            document.getElementById('manContent').innerHTML = lvl.man;
+            
+            editor.value = lvl.init;
+            updateEditor();
+            
+            document.getElementById('hintBox').classList.add('hidden');
+            document.getElementById('solutionBox').classList.add('hidden');
+            document.getElementById('solBtnText').innerText = "ACCEDER A SOLUCIÓN (CHEAT)";
+            document.getElementById('hintBtnText').innerText = "SOLICITAR PISTA (HINT)";
+            document.getElementById('solutionBox').innerText = lvl.sol;
+            document.getElementById('hintBox').innerText = lvl.hint;
+            
+            output.innerHTML = `<div class="opacity-50 text-[var(--dim-color)]">Sistema listo. Esperando script...</div>`;
+            document.getElementById('statusIndicator').innerText = "IDLE";
+            document.getElementById('statusIndicator').className = "opacity-50";
+
+            levelSelect.value = index;
+            saveProgress();
+        }
+
+        function runScript() {
+            const lvl = levels[currentLevel];
+            const code = editor.value;
+            
+            output.innerHTML = `<div class="text-yellow-500">> ./script.sh</div>`;
+            document.getElementById('statusIndicator').innerText = "RUNNING";
+            document.getElementById('statusIndicator').className = "text-yellow-500 animate-pulse";
+
+            setTimeout(() => {
+                if (lvl.check(code)) {
+                    output.innerHTML += `<div class="text-green-400 mt-2">${lvl.out}</div>`;
+                    output.innerHTML += `<div class="text-green-500 mt-4 border-t border-[var(--dim-color)] pt-2 font-bold">[EXIT CODE 0] SUCCESS</div>`;
+                    document.getElementById('statusIndicator').innerText = "SUCCESS";
+                    document.getElementById('statusIndicator').className = "text-green-500";
+                    
+                    setTimeout(() => {
+                        document.getElementById('successModal').classList.remove('hidden');
+                    }, 800);
+                } else {
+                    output.innerHTML += `<div class="text-red-400 mt-2">bash: error de sintaxis o lógica incorrecta.</div>`;
+                    output.innerHTML += `<div class="text-red-500 mt-2">[EXIT CODE 1] FAILURE</div>`;
+                    document.getElementById('statusIndicator').innerText = "ERROR";
+                    document.getElementById('statusIndicator').className = "text-red-500";
+                }
+            }, 600);
+        }
+
+        function nextLevel() {
+            document.getElementById('successModal').classList.add('hidden');
+            if (currentLevel < levels.length - 1) {
+                loadLevel(currentLevel + 1);
+            } else {
+                alert("¡HAS TERMINADO EL CURSO! ERES UN EXPERTO EN BASH.");
+            }
+        }
+
+        function updateEditor() {
+            const lines = editor.value.split('\n').length;
+            lineNumbers.innerHTML = Array(lines).fill(0).map((_, i) => i + 1).join('<br>');
+        }
+
+        function toggleHint() {
+            const box = document.getElementById('hintBox');
+            box.classList.toggle('hidden');
+        }
+
+        function toggleSolution() {
+            const box = document.getElementById('solutionBox');
+            box.classList.toggle('hidden');
+        }
+
+        function switchLeftTab(tab) {
+            document.getElementById('content-mission').classList.add('hidden');
+            document.getElementById('content-manpage').classList.add('hidden');
+            document.getElementById('tab-mission').classList.remove('tab-active');
+            document.getElementById('tab-manpage').classList.remove('tab-active');
+
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('tab-active');
+        }
+
+        function populateLevelSelect() {
+            levelSelect.innerHTML = levels.map((l, i) => `<option value="${i}">LVL ${l.id}: ${l.title}</option>`).join('');
+        }
+
+        function jumpToLevel(val) {
+            loadLevel(parseInt(val));
+        }
+
+        function saveProgress() {
+            localStorage.setItem('bash_level', currentLevel);
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('bash_level');
+            if (saved) currentLevel = parseInt(saved);
+        }
+
+        function resetAll() {
+            if(confirm("¿REINICIAR SISTEMA? Se perderá todo el progreso.")) {
+                localStorage.removeItem('bash_level');
+                currentLevel = 0;
+                loadLevel(0);
+                document.getElementById('introModal').classList.remove('hidden');
+            }
+        }
+
+        function setTheme(theme) {
+            document.body.classList.remove('theme-cream', 'theme-gray');
+            if (theme === 'cream') document.body.classList.add('theme-cream');
+            if (theme === 'gray') document.body.classList.add('theme-gray');
+        }
+
+        function closeIntro() {
+            document.getElementById('introModal').classList.add('hidden');
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
