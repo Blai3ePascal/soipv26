@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSimulator Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: var(--bg-main);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: var(--scrollbar-hover);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+        
+        body {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
+        .font-sans {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        
+        select.level-select {
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border-col);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
+            max-width: 250px;
+        }
+        select.level-select:hover {
+            border-color: var(--accent-col);
+        }
+
+        :root {
+            --bg-main: #1e1e1e;
+            --bg-sec: #252526;
+            --text-main: #d4d4d4;
+            --text-sec: #9ca3af;
+            --border-col: #3e3e42;
+            --accent-col: #007acc;
+            --code-bg: #1e1e1e;
+            --console-bg: #000000;
+            --scrollbar-thumb: #424242;
+            --scrollbar-hover: #4f4f4f;
+            --bg-input: #3e3e42;
+        }
+
+        body.theme-cream {
+            --bg-main: #fdf6e3;
+            --bg-sec: #eee8d5;
+            --text-main: #5c6a72;
+            --text-sec: #93a1a1;
+            --border-col: #d2cdbb;
+            --accent-col: #268bd2;
+            --code-bg: #fdf6e3;
+            --console-bg: #ffffff;
+            --scrollbar-thumb: #93a1a1;
+            --scrollbar-hover: #657b83;
+            --bg-input: #eee8d5;
+        }
+
+        body.theme-gray {
+            --bg-main: #ffffff;
+            --bg-sec: #f3f4f6;
+            --text-main: #111827;
+            --text-sec: #4b5563;
+            --border-col: #e5e7eb;
+            --accent-col: #374151;
+            --code-bg: #ffffff;
+            --console-bg: #f9fafb;
+            --scrollbar-thumb: #9ca3af;
+            --scrollbar-hover: #6b7280;
+            --bg-input: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col">
+
+    <div id="app" class="h-full flex flex-col w-full relative">
+    </div>
+
+    <div id="resetModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-gray-800 border border-gray-600 p-6 rounded-lg shadow-2xl max-w-sm w-full animate-in theme-modal">
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="text-yellow-500"></i> ¿Reiniciar Progreso?
+            </h3>
+            <p class="text-gray-300 mb-6 text-sm">
+                Esto borrará todo tu avance en ambos cursos y volverás al inicio. Esta acción no se puede deshacer.
+            </p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeResetModal()" class="px-4 py-2 rounded text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-700 transition">
+                    Cancelar
+                </button>
+                <button onclick="confirmReset()" class="px-4 py-2 rounded text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition shadow-lg">
+                    Sí, Reiniciar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const generalLevels = [
+            {
+                id: 1,
+                title: "La Estructura Básica",
+                instruction: "Todo programa en C necesita una función principal llamada ``main``. Es el punto de entrada. Simplemente escribe ``return 0;`` dentro de las llaves para indicar que el programa terminó bien.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Tu código va aquí\n    \n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    return 0;\n}`,
+                hint: "La función main debe devolver un entero (int). El valor 0 indica 'éxito'. No olvides el punto y coma final.",
+                validation: (code) => {
+                if (!code.includes('return 0;')) return { valid: false, error: "Falta la instrucción ``return 0;``." };
+                return { valid: true, output: "Process returned 0 (0x0) \n" };
+                },
+                explanation: "¡Muy bien! ``return 0;`` le dice al sistema operativo que el programa finalizó correctamente."
+            },
+            {
+                id: 2,
+                title: "Primer Mensaje",
+                instruction: "Usa la función ``printf`` para mostrar texto. Escribe ``printf(\"Hola\");`` antes del return.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Escribe el printf aquí\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    printf("Hola");\n    return 0;\n}`,
+                hint: "printf es una función que necesita paréntesis y el texto entre comillas dobles. Toda sentencia en C termina con ;",
+                validation: (code) => {
+                if (!/printf\s*\(\s*"Hola"\s*\)\s*;/.test(code)) return { valid: false, error: "Debes escribir exactamente: ``printf(\"Hola\");``" };
+                return { valid: true, output: "Hola" };
+                },
+                explanation: "``printf`` significa 'print formatted' (impresión con formato). Es la forma de hablar con el usuario."
+            },
+            {
+                id: 3,
+                title: "El Salto de Línea",
+                instruction: "En C, el texto no baja de línea automáticamente. Modifica tu código anterior añadiendo ``\\n`` dentro de las comillas: ``\"Hola\\n\"``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    printf("Hola");\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    printf("Hola\\n");\n    return 0;\n}`,
+                hint: "El carácter especial \\n debe estar DENTRO de la cadena de texto, no fuera. Es un código invisible para la consola.",
+                validation: (code) => {
+                if (!code.includes('"Hola\\n"')) return { valid: false, error: "Falta el carácter de escape ``\\n`` dentro del texto." };
+                return { valid: true, output: "Hola\n" };
+                },
+                explanation: "El carácter ``\\n`` es un 'escape sequence'. Le dice a la consola: 'aquí termina la línea, baja a la siguiente'."
+            },
+            {
+                id: 4,
+                title: "Comentarios",
+                instruction: "Los comentarios son notas para ti que el ordenador ignora. Escribe un comentario usando doble barra ``//`` que diga: ``// Esto es un saludo``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    printf("Hola\\n");\n    // Escribe tu comentario debajo\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    printf("Hola\\n");\n    // Esto es un saludo\n    return 0;\n}`,
+                hint: "Las dos barras diagonales indican que el resto de la línea es texto libre y no código ejecutable.",
+                validation: (code) => {
+                if (!code.includes('// Esto es un saludo')) return { valid: false, error: "Escribe exactamente el comentario solicitado." };
+                return { valid: true, output: "Hola\n" };
+                },
+                explanation: "Correcto. El compilador ignora todo lo que está después de ``//``. Úsalo para explicar tu código."
+            },
+            {
+                id: 5,
+                title: "Declarar Enteros",
+                instruction: "Las variables son cajas para guardar datos. Para guardar un número entero, usamos ``int``. Declara una variable llamada ``vida`` sin darle valor todavía.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara la variable 'vida' aquí\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int vida;\n    return 0;\n}`,
+                hint: "Para declarar, escribe el tipo de dato seguido del nombre que quieras darle y un punto y coma.",
+                validation: (code) => {
+                if (!/int\s+vida\s*;/.test(code)) return { valid: false, error: "Solo declara la variable: ``int vida;``" };
+                return { valid: true, output: "" };
+                },
+                explanation: "Has reservado espacio en memoria para un entero. Esa 'caja' se llama 'vida'."
+            },
+            {
+                id: 6,
+                title: "Asignar Valor",
+                instruction: "Ahora dale valor a ``vida``. Escribe ``vida = 100;`` debajo de la declaración.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int vida;\n    // Asigna el valor 100 aquí\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int vida;\n    vida = 100;\n    return 0;\n}`,
+                hint: "Usamos el operador '='. A la izquierda va el destino (la variable) y a la derecha el valor.",
+                validation: (code) => {
+                if (!/vida\s*=\s*100\s*;/.test(code)) return { valid: false, error: "Falta la asignación ``vida = 100;``" };
+                return { valid: true, output: "" };
+                },
+                explanation: "El operador ``=`` guarda el valor de la derecha en la variable de la izquierda."
+            },
+            {
+                id: 7,
+                title: "Inicialización",
+                instruction: "Podemos declarar y asignar en una sola línea. Borra lo anterior y escribe: ``int puntos = 50;``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara e inicializa 'puntos' con 50\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int puntos = 50;\n    return 0;\n}`,
+                hint: "Combina los dos pasos anteriores en una sola línea de código.",
+                validation: (code) => {
+                if (!/int\s+puntos\s*=\s*50\s*;/.test(code)) return { valid: false, error: "Usa: ``int puntos = 50;``" };
+                return { valid: true, output: "" };
+                },
+                explanation: "Esto se llama 'inicialización'. Es más limpio y seguro que declarar y asignar por separado."
+            },
+            {
+                id: 8,
+                title: "Imprimir Variables",
+                instruction: "Para mostrar el valor de una variable, usamos un 'placeholder' (marcador). Usa ``%d`` (decimal) dentro de printf: ``printf(\"Puntos: %d\", puntos);``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int puntos = 50;\n    // Imprime la variable aquí\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int puntos = 50;\n    printf("Puntos: %d", puntos);\n    return 0;\n}`,
+                hint: "La función printf necesita saber DÓNDE poner el número. '%d' es el hueco, y la variable 'puntos' es lo que rellena ese hueco.",
+                validation: (code) => {
+                if (!/printf\s*\(\s*"Puntos:\s*%d"\s*,\s*puntos\s*\)\s*;/.test(code)) return { valid: false, error: "Asegúrate de usar ``%d`` y poner ``, puntos`` después de las comillas." };
+                return { valid: true, output: "Puntos: 50" };
+                },
+                explanation: "¡Exacto! El programa ve ``%d`` y busca la primera variable después de la coma para poner su valor ahí."
+            },
+            {
+                id: 9,
+                title: "Suma Simple",
+                instruction: "Vamos a sumar. Declara ``int a = 5;``, ``int b = 3;`` y luego imprime su suma directamente: ``printf(\"%d\", a + b);``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara a y b, luego imprime la suma\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int a = 5;\n    int b = 3;\n    printf("%d", a + b);\n    return 0;\n}`,
+                hint: "Puedes poner operaciones matemáticas directamente como argumento en printf. El resultado se calculará antes de imprimir.",
+                validation: (code) => {
+                if (!/int\s+a\s*=\s*5\s*;/.test(code)) return { valid: false, error: "Declara ``int a = 5;``" };
+                if (!/int\s+b\s*=\s*3\s*;/.test(code)) return { valid: false, error: "Declara ``int b = 3;``" };
+                if (!/printf\s*\(\s*"%d"\s*,\s*a\s*\+\s*b\s*\)\s*;/.test(code)) return { valid: false, error: "El printf debe sumar: printf(\"%d\", a + b);" };
+                return { valid: true, output: "8" };
+                },
+                explanation: "Puedes hacer operaciones matemáticas directamente dentro de los argumentos de una función."
+            },
+            {
+                id: 10,
+                title: "Multiplicación",
+                instruction: "El símbolo de multiplicar es el asterisco ``*``. Crea una variable ``int doble = 10 * 2;`` e imprímela.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Calcula el doble de 10\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int doble = 10 * 2;\n    printf("%d", doble);\n    return 0;\n}`,
+                hint: "En informática no usamos la 'x' para multiplicar porque se confunde con la variable x. Usamos el asterisco.",
+                validation: (code) => {
+                if (!/int\s+doble\s*=\s*10\s*\*\s*2\s*;/.test(code)) return { valid: false, error: "La operación es: ``int doble = 10 * 2;``" };
+                if (!code.includes('printf')) return { valid: false, error: "No olvides imprimir el resultado con printf." };
+                return { valid: true, output: "20" };
+                },
+                explanation: "En programación, ``x`` no se usa para multiplicar. Siempre usamos ``*``."
+            },
+            {
+                id: 11,
+                title: "Condición IF (Si...)",
+                instruction: "A veces queremos que el código decida. Usa ``if`` para imprimir \"Ganaste\" solo si ``puntos`` es mayor que 10.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int puntos = 20;\n    if ( /* completa aquí */ ) {\n        printf("Ganaste");\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int puntos = 20;\n    if (puntos > 10) {\n        printf("Ganaste");\n    }\n    return 0;\n}`,
+                hint: "La estructura if evalúa lo que hay entre paréntesis. Si es verdadero, entra en las llaves. El símbolo de 'mayor que' es >.",
+                validation: (code) => {
+                if (!/if\s*\(\s*puntos\s*>\s*10\s*\)/.test(code)) return { valid: false, error: "La condición debe ser ``puntos > 10`` entre paréntesis." };
+                return { valid: true, output: "Ganaste" };
+                },
+                explanation: "El código dentro de las llaves ``{}`` del ``if`` solo se ejecuta si la condición es VERDADERA."
+            },
+            {
+                id: 12,
+                title: "Condición ELSE (Si no...)",
+                instruction: "Añade un bloque ``else`` después del ``if`` para imprimir \"Perdiste\" si la condición no se cumple. Cambia puntos a 5 para probarlo.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int puntos = 5;\n    if (puntos > 10) {\n        printf("Ganaste");\n    } \n    // Añade el else aquí\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int puntos = 5;\n    if (puntos > 10) {\n        printf("Ganaste");\n    } else {\n        printf("Perdiste");\n    }\n    return 0;\n}`,
+                hint: "Else significa 'en caso contrario'. No lleva condición entre paréntesis, solo llaves.",
+                validation: (code) => {
+                if (!/else\s*\{\s*printf\s*\(\s*"Perdiste"\s*\)\s*;\s*\}/.test(code.replace(/\s+/g, ' '))) return { valid: false, error: "Añade el bloque else correctamente." };
+                return { valid: true, output: "Perdiste" };
+                },
+                explanation: "El ``else`` captura todo lo que no cumple el ``if``. Es una bifurcación en el camino."
+            },
+            {
+                id: 13,
+                title: "Comparación de Igualdad",
+                instruction: "¡Cuidado! Para comparar si dos cosas son iguales se usa doble igual ``==``. Verifica si ``vidas == 0``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int vidas = 0;\n    if ( /* ¿vidas es igual a 0? */ ) {\n        printf("Game Over");\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int vidas = 0;\n    if (vidas == 0) {\n        printf("Game Over");\n    }\n    return 0;\n}`,
+                hint: "En C, un solo '=' es ASIGNACIÓN (dar valor). Dos '==' son COMPARACIÓN (preguntar si es igual).",
+                validation: (code) => {
+                if (!/if\s*\(\s*vidas\s*==\s*0\s*\)/.test(code)) return { valid: false, error: "Debes usar ``==`` para comparar. Un solo ``=`` es para asignar." };
+                return { valid: true, output: "Game Over" };
+                },
+                explanation: "Error común: ``vidas = 0`` asigna valor. ``vidas == 0`` compara valor."
+            },
+            {
+                id: 14,
+                title: "Bucle While (Mientras)",
+                instruction: "Queremos repetir algo. Un bucle ``while`` repite MIENTRAS la condición sea verdadera. Haz que imprima ``i`` mientras ``i < 3``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int i = 0;\n    while ( /* condición */ ) {\n        printf("%d\\n", i);\n        i = i + 1;\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int i = 0;\n    while (i < 3) {\n        printf("%d\\n", i);\n        i = i + 1;\n    }\n    return 0;\n}`,
+                hint: "El bucle se ejecutará una y otra vez siempre que la condición del paréntesis siga siendo cierta. Asegúrate de que 'i' aumente o nunca terminará.",
+                validation: (code) => {
+                if (!/while\s*\(\s*i\s*<\s*3\s*\)/.test(code)) return { valid: false, error: "La condición del while debe ser ``i < 3``." };
+                return { valid: true, output: "0\n1\n2\n" };
+                },
+                explanation: "El ordenador verifica la condición, ejecuta el código, y vuelve a verificar. Así hasta que sea falsa."
+            },
+            {
+                id: 15,
+                title: "Incremento Rápido",
+                instruction: "Escribir ``i = i + 1`` es muy largo. Los programadores usan ``i++``. Cambia la línea de incremento.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    int i = 0;\n    while (i < 3) {\n        printf("%d\\n", i);\n        i = i + 1; // Cámbialo por i++\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    int i = 0;\n    while (i < 3) {\n        printf("%d\\n", i);\n        i++;\n    }\n    return 0;\n}`,
+                hint: "El operador ++ simplemente suma 1 a la variable actual. Es una abreviatura muy común.",
+                validation: (code) => {
+                if (!/i\+\+\s*;/.test(code)) return { valid: false, error: "Usa el operador de incremento: ``i++;``" };
+                return { valid: true, output: "0\n1\n2\n" };
+                },
+                explanation: "``++`` incrementa en 1 el valor de la variable. Es el operador más famoso de C (de ahí C++)."
+            },
+            {
+                id: 16,
+                title: "Bucle For (Para)",
+                instruction: "El bucle ``for`` resume todo: inicio, condición y actualización en una línea. Escribe: ``for(int i=0; i<3; i++)``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Escribe el bucle for completo\n    {\n        printf("%d", i);\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    for(int i=0; i<3; i++) {\n        printf("%d", i);\n    }\n    return 0;\n}`,
+                hint: "La sintaxis del for tiene 3 partes separadas por punto y coma: 1. Inicio (int i=0), 2. Condición (i<3), 3. Paso (i++).",
+                validation: (code) => {
+                if (!/for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*3\s*;\s*i\+\+\s*\)/.test(code)) return { valid: false, error: "La sintaxis es estricta: ``for(int i=0; i<3; i++)``" };
+                return { valid: true, output: "012" };
+                },
+                explanation: "Es el bucle más usado porque tienes todo el control de la repetición en una sola línea."
+            },
+            {
+                id: 17,
+                title: "Tipos de Datos: char",
+                instruction: "Para guardar una sola letra usamos ``char``. Declara ``char letra = 'A';`` (nota las comillas simples) e imprímela con ``%c``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara e imprime el char\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    char letra = 'A';\n    printf("%c", letra);\n    return 0;\n}`,
+                hint: "Los caracteres individuales van entre comillas simples ' '. Para imprimirlos, el código de formato es %c (de character).",
+                validation: (code) => {
+                if (!/char\s+letra\s*=\s*'A'\s*;/.test(code)) return { valid: false, error: "Usa comillas simples para caracteres: ``char letra = 'A';``" };
+                if (!/printf\s*\(\s*".*%c.*"\s*,\s*letra\s*\)/.test(code)) return { valid: false, error: "Usa ``%c`` en el printf para caracteres." };
+                return { valid: true, output: "A" };
+                },
+                explanation: "Las comillas simples ``' '`` son para un solo carácter. Las dobles ``\" \"`` son para texto."
+            },
+            {
+                id: 18,
+                title: "Tipos de Datos: float",
+                instruction: "Para números con decimales usamos ``float``. Declara ``float pi = 3.14;`` e imprímela con ``%f``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara e imprime pi\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    float pi = 3.14;\n    printf("%f", pi);\n    return 0;\n}`,
+                hint: "Los números decimales en C se escriben con punto (3.14). El especificador de formato es %f (de floating point).",
+                validation: (code) => {
+                if (!/float\s+pi\s*=\s*3\.14\s*;/.test(code)) return { valid: false, error: "Declara: ``float pi = 3.14;``" };
+                if (!code.includes('%f')) return { valid: false, error: "Usa ``%f`` para imprimir números flotantes." };
+                return { valid: true, output: "3.140000" };
+                },
+                explanation: "Los enteros (int) no pueden guardar decimales, por eso necesitamos float (punto flotante)."
+            },
+            {
+                id: 19,
+                title: "Constantes",
+                instruction: "Si un valor no debe cambiar nunca, usa ``const``. Declara ``const int MAX = 10;``. Si intentas cambiarlo, daría error.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara la constante MAX\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    const int MAX = 10;\n    return 0;\n}`,
+                hint: "La palabra clave 'const' antes del tipo de dato bloquea la variable para que sea de solo lectura.",
+                validation: (code) => {
+                if (!/const\s+int\s+MAX\s*=\s*10\s*;/.test(code)) return { valid: false, error: "La sintaxis es: ``const int MAX = 10;``" };
+                return { valid: true, output: "" };
+                },
+                explanation: "Usar ``const`` protege tus variables de cambios accidentales."
+            },
+            {
+                id: 20,
+                title: "Graduación Básica",
+                instruction: "¡Reto de bucles! Haz un bucle que cuente del 1 al 5 e imprima solo los números pares usando un ``if`` dentro del bucle. (Pista: un número es par si ``i % 2 == 0``).",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    for(int i=1; i<=5; i++) {\n        // Pon el if aquí para imprimir solo si es par\n        \n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    for(int i=1; i<=5; i++) {\n        if (i % 2 == 0) {\n            printf("%d ", i);\n        }\n    }\n    return 0;\n}`,
+                hint: "El operador % (módulo) da el resto de una división. Si divides por 2 y el resto es 0, es par. Usa eso en el if.",
+                validation: (code) => {
+                if (!/if\s*\(\s*i\s*%\s*2\s*==\s*0\s*\)/.test(code)) return { valid: false, error: "Usa el operador módulo: ``i % 2 == 0`` para saber si es par." };
+                return { valid: true, output: "2 4 " };
+                },
+                explanation: "¡Felicidades! Has completado la primera parte."
+            },
+            {
+                id: 21,
+                title: "Cadenas de Texto (Strings)",
+                instruction: "En C, no existe el tipo 'string'. Son arrays de char. Declara ``char nombre[] = \"Ana\";`` e imprímelo usando ``%s``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Declara tu string aquí\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    char nombre[] = "Ana";\n    printf("%s", nombre);\n    return 0;\n}`,
+                hint: "Los corchetes [] vacíos le dicen a C que calcule el tamaño automáticamente basado en el texto entre comillas dobles. Usa %s para imprimirlo.",
+                validation: (code) => {
+                    if (!/char\s+nombre\s*\[\s*\]\s*=\s*"Ana"\s*;/.test(code)) return { valid: false, error: "La declaración es: ``char nombre[] = \"Ana\";``" };
+                    if (!/printf\s*\(\s*".*%s.*"\s*,\s*nombre\s*\)/.test(code)) return { valid: false, error: "Usa ``%s`` en el printf para cadenas completas." };
+                    return { valid: true, output: "Ana" };
+                },
+                explanation: "C añade automáticamente un carácter invisible ``\\0`` al final para saber dónde termina el texto."
+            },
+            {
+                id: 22,
+                title: "Punteros a Char",
+                instruction: "También podemos usar un puntero para apuntar al texto. Declara ``char *mensaje = \"Hola\";`` e imprime la primera letra usando ``*mensaje``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Puntero a char\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    char *mensaje = "Hola";\n    printf("%c", *mensaje);\n    return 0;\n}`,
+                hint: "Un 'char *' apunta a la dirección de memoria donde empieza el texto. Al desreferenciarlo con *, obtienes el carácter en esa posición (el primero).",
+                validation: (code) => {
+                    if (!/char\s*\*\s*mensaje\s*=\s*"Hola"\s*;/.test(code)) return { valid: false, error: "Declara: ``char *mensaje = \"Hola\";``" };
+                    if (!/printf\s*\(\s*".*%c.*"\s*,\s*\*mensaje\s*\)/.test(code)) return { valid: false, error: "Para imprimir una sola letra usa %c y *mensaje." };
+                    return { valid: true, output: "H" };
+                },
+                explanation: "Como los strings son secuencias en memoria, un puntero al inicio nos permite recorrerlas."
+            },
+            {
+                id: 23,
+                title: "Argumentos Main: argc",
+                instruction: "La función main puede recibir argumentos. Escríbela como ``int main(int argc, char *argv[])``. ``argc`` (argument count) dice cuántos argumentos hay. Imprime ``argc`` con %d.",
+                initialCode: `#include <stdio.h>\n\n// Cambia la definición del main\nint main() {\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main(int argc, char *argv[]) {\n    printf("%d", argc);\n    return 0;\n}`,
+                execArgs: "uno dos", 
+                hint: "Cambia 'int main()' por 'int main(int argc, char *argv[])'. argc es un entero que cuenta palabras en la línea de comandos.",
+                validation: (code) => {
+                    if (!/int\s+main\s*\(\s*int\s+argc\s*,\s*char\s*\*\s*argv\s*\[\s*\]\s*\)/.test(code)) return { valid: false, error: "La firma debe ser ``int main(int argc, char *argv[])``" };
+                    if (!/printf\s*\(\s*".*%d.*"\s*,\s*argc\s*\)/.test(code)) return { valid: false, error: "Imprime la variable argc." };
+                    return { valid: true, output: "3" }; 
+                },
+                explanation: "¡Salida 3! ¿Por qué? Porque el nombre del programa (./main) cuenta como el primer argumento, más 'uno' y 'dos'."
+            },
+            {
+                id: 24,
+                title: "Argumentos Main: argv",
+                instruction: "``argv`` (argument vector) es una lista de los textos. ``argv[0]`` es el nombre del programa. Imprime el primer argumento real (índice 1) usando ``%s`` y ``argv[1]``.",
+                initialCode: `#include <stdio.h>\n\nint main(int argc, char *argv[]) {\n    // Imprime el argumento 1\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main(int argc, char *argv[]) {\n    printf("%s", argv[1]);\n    return 0;\n}`,
+                execArgs: "secreto",
+                hint: "argv es un array de strings. Accede a la posición 1 como si fuera un array normal: argv[1].",
+                validation: (code) => {
+                    if (!/printf\s*\(\s*".*%s.*"\s*,\s*argv\[1\]\s*\)/.test(code)) return { valid: false, error: "Imprime ``argv[1]`` con formato ``%s``." };
+                    return { valid: true, output: "secreto" };
+                },
+                explanation: "Así es como los programas de terminal leen las opciones que les pasas."
+            },
+            {
+                id: 25,
+                title: "Reto: Listar Argumentos",
+                instruction: "Crea un bucle ``for`` que vaya desde ``i=0`` hasta ``i < argc`` e imprima todos los argumentos recibidos.",
+                initialCode: `#include <stdio.h>\n\nint main(int argc, char *argv[]) {\n    // Bucle para imprimir todo argv\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main(int argc, char *argv[]) {\n    for(int i=0; i<argc; i++) {\n        printf("%s\\n", argv[i]);\n    }\n    return 0;\n}`,
+                execArgs: "manzana pera",
+                hint: "Usa un bucle for estándar usando 'argc' como límite superior. Dentro, imprime argv[i].",
+                validation: (code) => {
+                    if (!/for\s*\(\s*int\s+i\s*=\s*0\s*;\s*i\s*<\s*argc\s*;\s*i\+\+\s*\)/.test(code)) return { valid: false, error: "El bucle debe recorrer desde 0 hasta < argc." };
+                    if (!/printf.*argv\[i\]/.test(code)) return { valid: false, error: "Imprime argv[i] dentro del bucle." };
+                    return { valid: true, output: "./main\nmanzana\npera\n" };
+                },
+                explanation: "Has creado un programa que puede inspeccionarse a sí mismo y ver cómo fue ejecutado."
+            },
+            {
+                id: 26,
+                title: "El Makefile (Concepto)",
+                instruction: "Para compilar programas grandes, usamos un archivo 'Makefile'. Escribe en el editor el contenido de un Makefile simple:\n``main: main.c``\n(TAB)``gcc -o main main.c``",
+                initialCode: `# Este archivo simula ser un Makefile\n# Escribe la regla abajo:\n\n`,
+                solution: `main: main.c\n\tgcc -o main main.c`,
+                hint: "Un Makefile tiene reglas: 'objetivo: dependencias'. La siguiente línea DEBE empezar con un tabulador (aquí puedes usar espacios) y el comando.",
+                validation: (code) => {
+                    if (!/main:\s*main\.c/.test(code)) return { valid: false, error: "Falta la definición del objetivo: ``main: main.c``" };
+                    if (!/gcc\s+-o\s+main\s+main\.c/.test(code)) return { valid: false, error: "Falta el comando de compilación: ``gcc -o main main.c``" };
+                    return { valid: true, output: "gcc -o main main.c\nCompilación completada via make." };
+                },
+                explanation: "Al escribir 'make' en la consola, el sistema busca este archivo y ejecuta los comandos necesarios automáticamente."
+            },
+            {
+                id: 27,
+                title: "Getopt: Librerías",
+                instruction: "Para procesar opciones profesionales (como -a o -b), usamos ``getopt``. Necesitas incluir ``<unistd.h>``. Añado al código.",
+                initialCode: `#include <stdio.h>\n// Incluye la librería aquí\n\nint main(int argc, char *argv[]) {\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    return 0;\n}`,
+                hint: "Simplemente escribe: #include <unistd.h> al inicio del archivo.",
+                validation: (code) => {
+                    if (!code.includes('<unistd.h>')) return { valid: false, error: "Debes incluir la cabecera: ``#include <unistd.h>``" };
+                    return { valid: true, output: "" };
+                },
+                explanation: "Esta cabecera contiene la definición de getopt, optarg y optind."
+            },
+            {
+                id: 28,
+                title: "Getopt: El Bucle",
+                instruction: "``getopt`` devuelve las opciones una a una. Se usa en un ``while``. Declara ``int opt;`` y crea un bucle: ``while((opt = getopt(argc, argv, \"ab\")) != -1)``.",
+                initialCode: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    // Declara opt y el bucle while\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "ab")) != -1) {\n    }\n    return 0;\n}`,
+                execArgs: "-a -b",
+                hint: "La función getopt toma (argc, argv, y una cadena con las letras válidas). Devuelve -1 cuando termina. El bucle debe continuar mientras NO sea -1.",
+                validation: (code) => {
+                    if (!/int\s+opt\s*;/.test(code)) return { valid: false, error: "Declara la variable ``int opt;``" };
+                    if (!/while\s*\(\s*\(\s*opt\s*=\s*getopt\s*\(\s*argc\s*,\s*argv\s*,\s*"ab"\s*\)\s*\)\s*!=\s*-1\s*\)/.test(code)) return { valid: false, error: "La estructura exacta es: while((opt = getopt(argc, argv, \"ab\")) != -1)" };
+                    return { valid: true, output: "" };
+                },
+                explanation: "\"ab\" significa que nuestro programa acepta las banderas -a y -b."
+            },
+            {
+                id: 29,
+                title: "Getopt: El Switch",
+                instruction: "Dentro del bucle, usa un ``switch(opt)`` para ver qué opción tocó. Añade ``case 'a':`` que imprima \"Opción A\".",
+                initialCode: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "ab")) != -1) {\n        // Añade el switch aquí\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "ab")) != -1) {\n        switch(opt) {\n            case 'a':\n                printf("Opción A");\n                break;\n        }\n    }\n    return 0;\n}`,
+                execArgs: "-a",
+                hint: "switch(variable) evalúa la variable. case 'a': define qué hacer si la variable es 'a'. No olvides el break;",
+                validation: (code) => {
+                    if (!/switch\s*\(\s*opt\s*\)/.test(code)) return { valid: false, error: "Falta el ``switch(opt)``." };
+                    if (!/case\s*'a':/.test(code)) return { valid: false, error: "Falta el ``case 'a':``" };
+                    if (!/printf.*Opción A/.test(code)) return { valid: false, error: "Imprime \"Opción A\" dentro del case." };
+                    return { valid: true, output: "Opción A" };
+                },
+                explanation: "¡Funciona! Si ejecutas con -a, entra en el case 'a'. Si fuera -b, entraría en otro case."
+            },
+            {
+                id: 30,
+                title: "Getopt: Argumentos (optarg)",
+                instruction: "A veces las opciones llevan valor (ej: -n Juan). En la cadena de configuración, \"n:\" (con dos puntos) indica que 'n' requiere valor. Ese valor se guarda automáticamente en la variable externa ``optarg``. Imprímelo.",
+                initialCode: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    // Nota "n:" abajo, indica que 'n' espera un valor\n    while((opt = getopt(argc, argv, "n:")) != -1) {\n        if (opt == 'n') {\n            // Imprime optarg con %s\n        }\n    }\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "n:")) != -1) {\n        if (opt == 'n') {\n            printf("%s", optarg);\n        }\n    }\n    return 0;\n}`,
+                execArgs: "-n Pepe",
+                hint: "optarg es una variable mágica (char*) que getopt rellena por ti. Solo tienes que imprimirla: printf(\"%s\", optarg);",
+                validation: (code) => {
+                    if (!/printf\s*\(\s*".*%s.*"\s*,\s*optarg\s*\)/.test(code)) return { valid: false, error: "Usa ``printf(\"%s\", optarg);`` para ver el valor recibido." };
+                    return { valid: true, output: "Pepe" };
+                },
+                explanation: "Los dos puntos ':' son clave. Dicen 'esta opción no viene sola, trae un acompañante'. Ese acompañante acaba en optarg."
+            },
+            {
+                id: 31,
+                title: "Getopt: Índice (optind)",
+                instruction: "Tras procesar las opciones (con guión), pueden quedar argumentos normales (nombres de archivo, etc.). ``optind`` es el índice donde empiezan estos restos. Imprime el argumento restante usando ``argv[optind]``.",
+                initialCode: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "a")) != -1) { /* procesa opciones */ }\n    \n    // Aquí getopt ya terminó. Imprime lo que sobra en argv[optind]\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n#include <unistd.h>\n\nint main(int argc, char *argv[]) {\n    int opt;\n    while((opt = getopt(argc, argv, "a")) != -1) { }\n    printf("%s", argv[optind]);\n    return 0;\n}`,
+                execArgs: "-a archivo.txt",
+                hint: "getopt reordena argv. Al terminar, optind apunta al primer elemento que NO es una opción. Úsalo como índice: argv[optind].",
+                validation: (code) => {
+                    if (!/printf\s*\(\s*".*%s.*"\s*,\s*argv\[optind\]\s*\)/.test(code)) return { valid: false, error: "Imprime ``argv[optind]`` para ver el argumento restante." };
+                    return { valid: true, output: "archivo.txt" };
+                },
+                explanation: "¡Maestro de argumentos! Has procesado las banderas y has recuperado el archivo final. Así funcionan comandos como `ls -l directorio`."
+            },
+            {
+                id: 32,
+                title: "Syscalls: open (crear)",
+                instruction: "Las 'System Calls' hablan directo con el Kernel. Vamos a crear un archivo. Usa ``open`` con los flags ``O_CREAT | O_WRONLY`` y permisos ``0644``.",
+                initialCode: `#include <fcntl.h>\n#include <unistd.h>\n#include <stdio.h>\n\nint main() {\n    // Abre "datos.txt" y guarda el fd (file descriptor)\n    int fd = \n    printf("FD: %d\\n", fd);\n    return 0;\n}`,
+                solution: `#include <fcntl.h>\n#include <unistd.h>\n#include <stdio.h>\n\nint main() {\n    int fd = open("datos.txt", O_CREAT | O_WRONLY, 0644);\n    printf("FD: %d\\n", fd);\n    return 0;\n}`,
+                hint: "Sintaxis: open(\"nombre\", FLAGS, permisos); Flags: O_CREAT | O_WRONLY. Permisos: 0644.",
+                validation: (code) => {
+                    if (!/open\s*\(\s*"datos\.txt"\s*,\s*O_CREAT\s*\|\s*O_WRONLY/.test(code)) return { valid: false, error: "Usa ``open(\"datos.txt\", O_CREAT | O_WRONLY, ...);``" };
+                    return { valid: true, output: "FD: 3\n[Sistema] Archivo 'datos.txt' creado." };
+                },
+                explanation: "¡Has obtenido un File Descriptor (FD)! Normalmente es 3, porque 0, 1 y 2 son entrada, salida y error estándar."
+            },
+            {
+                id: 33,
+                title: "Syscalls: write",
+                instruction: "Ahora usa ese FD para escribir. Usa ``write(fd, \"Hola\", 4);`` para escribir 4 bytes.",
+                initialCode: `#include <fcntl.h>\n#include <unistd.h>\n\nint main() {\n    int fd = 3; // Suponemos que ya abrimos el archivo\n    // Escribe "Hola"\n    \n    return 0;\n}`,
+                solution: `#include <fcntl.h>\n#include <unistd.h>\n\nint main() {\n    int fd = 3;\n    write(fd, "Hola", 4);\n    return 0;\n}`,
+                hint: "write requiere 3 cosas: dónde escribir (fd), qué escribir (el texto) y cuánto escribir (número de bytes).",
+                validation: (code) => {
+                    if (!/write\s*\(\s*fd\s*,\s*"Hola"\s*,\s*4\s*\)/.test(code)) return { valid: false, error: "La sintaxis es ``write(fd, \"Hola\", 4);``" };
+                    return { valid: true, output: "[Sistema] 4 bytes escritos en FD 3." };
+                },
+                explanation: "Write es crudo y directo. No añade saltos de línea ni formato. Escribe bytes puros en el disco."
+            },
+            {
+                id: 34,
+                title: "Syscalls: close",
+                instruction: "Siempre debes cerrar lo que abres para no agotar recursos. Usa ``close(fd);``.",
+                initialCode: `#include <unistd.h>\n\nint main() {\n    int fd = 3;\n    // Cierra el archivo\n    \n    return 0;\n}`,
+                solution: `#include <unistd.h>\n\nint main() {\n    int fd = 3;\n    close(fd);\n    return 0;\n}`,
+                hint: "Tan simple como llamar a close pasándole el descriptor de archivo.",
+                validation: (code) => {
+                    if (!/close\s*\(\s*fd\s*\)/.test(code)) return { valid: false, error: "Usa ``close(fd);``" };
+                    return { valid: true, output: "[Sistema] FD 3 liberado." };
+                },
+                explanation: "Si no cierras archivos, tu programa eventualmente fallará al alcanzar el límite de archivos abiertos del sistema."
+            },
+            {
+                id: 35,
+                title: "Syscalls: open (leer)",
+                instruction: "Vamos a leer lo que escribimos. Abre \"datos.txt\" pero esta vez con el flag ``O_RDONLY`` (Read Only).",
+                initialCode: `#include <fcntl.h>\n#include <stdio.h>\n\nint main() {\n    // Abre para leer\n    int fd = \n    printf("Abierto para lectura: %d", fd);\n    return 0;\n}`,
+                solution: `#include <fcntl.h>\n#include <stdio.h>\n\nint main() {\n    int fd = open("datos.txt", O_RDONLY);\n    printf("Abierto para lectura: %d", fd);\n    return 0;\n}`,
+                hint: "Usa open solo con dos argumentos esta vez: el nombre y O_RDONLY.",
+                validation: (code) => {
+                    if (!/open\s*\(\s*"datos\.txt"\s*,\s*O_RDONLY\s*\)/.test(code)) return { valid: false, error: "Usa ``open(\"datos.txt\", O_RDONLY);``" };
+                    return { valid: true, output: "Abierto para lectura: 3" };
+                },
+                explanation: "Hemos vuelto a obtener el FD 3 porque lo cerramos anteriormente y quedó libre."
+            },
+            {
+                id: 36,
+                title: "Syscalls: read",
+                instruction: "Prepara un buffer (array de char) y usa ``read(fd, buffer, 10);`` para leer el contenido.",
+                initialCode: `#include <unistd.h>\n#include <stdio.h>\n\nint main() {\n    int fd = 3;\n    char buffer[20];\n    // Lee del archivo al buffer\n    \n    printf("Leído: %s", buffer);\n    return 0;\n}`,
+                solution: `#include <unistd.h>\n#include <stdio.h>\n\nint main() {\n    int fd = 3;\n    char buffer[20];\n    read(fd, buffer, 10);\n    printf("Leído: %s", buffer);\n    return 0;\n}`,
+                hint: "read(origen, destino, cantidad). Lee del fd y lo guarda en buffer.",
+                validation: (code) => {
+                    if (!/read\s*\(\s*fd\s*,\s*buffer\s*,\s*10\s*\)/.test(code)) return { valid: false, error: "Usa ``read(fd, buffer, 10);``" };
+                    return { valid: true, output: "Leído: Hola" };
+                },
+                explanation: "Read devuelve el número de bytes leídos. Si devuelve 0, significa que has llegado al final del archivo (EOF)."
+            },
+            {
+                id: 37,
+                title: "Syscalls: lseek",
+                instruction: "El 'cursor' de lectura avanza al leer. Si quieres volver a leer desde el principio, usa ``lseek(fd, 0, SEEK_SET);``.",
+                initialCode: `#include <unistd.h>\n\nint main() {\n    int fd = 3;\n    // Mueve el cursor al inicio\n    \n    return 0;\n}`,
+                solution: `#include <unistd.h>\n\nint main() {\n    int fd = 3;\n    lseek(fd, 0, SEEK_SET);\n    return 0;\n}`,
+                hint: "lseek(fd, desplazamiento, desde_donde). SEEK_SET es el inicio del archivo.",
+                validation: (code) => {
+                    if (!/lseek\s*\(\s*fd\s*,\s*0\s*,\s*SEEK_SET\s*\)/.test(code)) return { valid: false, error: "Usa ``lseek(fd, 0, SEEK_SET);``" };
+                    return { valid: true, output: "[Sistema] Cursor movido al byte 0." };
+                },
+                explanation: "lseek te permite saltar a cualquier parte del archivo al instante (acceso aleatorio)."
+            },
+            {
+                id: 38,
+                title: "StdIO: fopen",
+                instruction: "Ahora haremos lo mismo con la librería estándar de C (stdio.h). Es más fácil. Usa ``fopen(\"notas.txt\", \"w\");`` para abrir/crear. Devuelve un puntero ``FILE *``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Abre usando fopen\n    FILE *f = \n    if (f) printf("Archivo abierto");\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "w");\n    if (f) printf("Archivo abierto");\n    return 0;\n}`,
+                hint: "En lugar de flags complejos, usa modos de texto como \"w\" (write) o \"r\" (read).",
+                validation: (code) => {
+                    if (!/fopen\s*\(\s*"notas\.txt"\s*,\s*"w"\s*\)/.test(code)) return { valid: false, error: "Usa ``fopen(\"notas.txt\", \"w\");``" };
+                    return { valid: true, output: "Archivo abierto" };
+                },
+                explanation: "FILE * es una estructura que maneja el buffer por ti. Es más lento pero más cómodo que los syscalls."
+            },
+            {
+                id: 39,
+                title: "StdIO: fwrite",
+                instruction: "Para escribir bloques de datos usamos ``fwrite``. Escribe \"ABC\": ``fwrite(\"ABC\", 1, 3, f);`` (1 byte, 3 veces).",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "w");\n    // Escribe usando fwrite\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "w");\n    fwrite("ABC", 1, 3, f);\n    return 0;\n}`,
+                hint: "fwrite(datos, tamaño_elemento, numero_elementos, fichero).",
+                validation: (code) => {
+                    if (!/fwrite\s*\(\s*"ABC"\s*,\s*1\s*,\s*3\s*,\s*f\s*\)/.test(code)) return { valid: false, error: "Usa ``fwrite(\"ABC\", 1, 3, f);``" };
+                    return { valid: true, output: "[StdIO] 3 elementos escritos en el buffer." };
+                },
+                explanation: "A diferencia de write, fwrite suele guardar los datos en memoria (buffer) antes de bajarlos al disco realmente."
+            },
+            {
+                id: 40,
+                title: "StdIO: fclose",
+                instruction: "Cierra el flujo con ``fclose(f);``. Esto asegura que los datos del buffer se escriban en disco (flush).",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "w");\n    // Cierra el archivo\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "w");\n    fclose(f);\n    return 0;\n}`,
+                hint: "Simplemente llama a fclose pasando el puntero FILE.",
+                validation: (code) => {
+                    if (!/fclose\s*\(\s*f\s*\)/.test(code)) return { valid: false, error: "Usa ``fclose(f);``" };
+                    return { valid: true, output: "[StdIO] Archivo cerrado y guardado." };
+                },
+                explanation: "Es crítico cerrar archivos en stdio. Si el programa se cuelga antes del fclose, podrías perder lo escrito."
+            },
+            {
+                id: 41,
+                title: "StdIO: fopen (leer)",
+                instruction: "Abre el archivo para leer usando el modo ``\"r\"``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    // Abre notas.txt con modo "r"\n    FILE *f = \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "r");\n    return 0;\n}`,
+                hint: "Usa fopen con el segundo argumento \"r\".",
+                validation: (code) => {
+                    if (!/fopen\s*\(\s*"notas\.txt"\s*,\s*"r"\s*\)/.test(code)) return { valid: false, error: "Usa ``fopen(\"notas.txt\", \"r\");``" };
+                    return { valid: true, output: "[StdIO] Abierto para lectura." };
+                },
+                explanation: "El modo \"r\" falla si el archivo no existe. \"w\" siempre crea uno nuevo (o borra el existente)."
+            },
+            {
+                id: 42,
+                title: "StdIO: fread",
+                instruction: "Lee los datos con ``fread(buffer, 1, 3, f);``.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "r");\n    char buffer[10];\n    // Lee 3 bytes\n    \n    printf("Leído: %s", buffer);\n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "r");\n    char buffer[10];\n    fread(buffer, 1, 3, f);\n    printf("Leído: %s", buffer);\n    return 0;\n}`,
+                hint: "La sintaxis es igual que fwrite pero para leer: fread(destino, tamaño, cantidad, origen).",
+                validation: (code) => {
+                    if (!/fread\s*\(\s*buffer\s*,\s*1\s*,\s*3\s*,\s*f\s*\)/.test(code)) return { valid: false, error: "Usa ``fread(buffer, 1, 3, f);``" };
+                    return { valid: true, output: "Leído: ABC" };
+                },
+                explanation: "fread es ideal para leer estructuras de datos binarias completas de una sola vez."
+            },
+            {
+                id: 43,
+                title: "StdIO: fseek",
+                instruction: "Para moverte por el archivo usa ``fseek(f, 0, SEEK_SET);`` para volver al inicio.",
+                initialCode: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "r");\n    // Vuelve al principio\n    \n    return 0;\n}`,
+                solution: `#include <stdio.h>\n\nint main() {\n    FILE *f = fopen("notas.txt", "r");\n    fseek(f, 0, SEEK_SET);\n    return 0;\n}`,
+                hint: "fseek funciona igual que lseek pero recibe el puntero FILE *.",
+                validation: (code) => {
+                    if (!/fseek\s*\(\s*f\s*,\s*0\s*,\s*SEEK_SET\s*\)/.test(code)) return { valid: false, error: "Usa ``fseek(f, 0, SEEK_SET);``" };
+                    return { valid: true, output: "[StdIO] Puntero rebobinado." };
+                },
+                explanation: "fseek permite navegar por el archivo. SEEK_SET (inicio), SEEK_CUR (actual), SEEK_END (final)."
+            },
+             {
+                id: 44,
+                title: "Graduación Avanzada",
+                instruction: "Has dominado lo esencial, argumentos y ahora I/O de archivos. Estás listo para enfrentarte al mundo real de C.",
+                initialCode: `// Curso General Completado.\n// ¡Felicidades, programador!`,
+                solution: `// Curso General Completado.`,
+                hint: "No hay código aquí, solo disfruta tu logro.",
+                validation: (code) => {
+                    return { valid: true, output: "Curso Finalizado." };
+                },
+                explanation: "Has cubierto variables, control de flujo, punteros básicos, argumentos, makefile y gestión de archivos."
+            }
+        ];
+
+        const pointerLevels = [
+            {
+                id: 1,
+                title: "¿Dónde viven las variables?",
+                instruction: "Toda variable se guarda en una dirección de memoria. Para ver la dirección de ``numero``, usamos ``%p`` en printf y el operador ``&`` antes del nombre. Pruébalo.",
+                initialCode: `int main() {\n    int numero = 50;\n    printf("Valor: %d\\n", numero);\n    // Imprime la dirección aquí con %p y &numero\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int numero = 50;\n    printf("Valor: %d\\n", numero);\n    printf("Dirección: %p", &numero);\n    return 0;\n}`,
+                memoryInit: { '0x7FF0': { name: 'numero', value: 50, type: 'int' } },
+                hint: "Escribe: printf(\"Dirección: %p\", &numero);",
+                validation: (code) => {
+                if (!/printf.*%p.*&numero/.test(code)) return { valid: false, error: "Necesitas ``%p`` y ``&numero`` en el printf." };
+                return { valid: true, output: "Valor: 50\nDirección: 0x7FF0" };
+                },
+                explanation: "El operador ``&`` (ampersand) se lee como 'dirección de'. Es como preguntar en qué calle vive la variable."
+            },
+            {
+                id: 2,
+                title: "Declarar un Puntero",
+                instruction: "Un puntero es una variable especial que guarda direcciones. Para declarar uno que apunte a enteros, usamos el asterisco: ``int *p;``.",
+                initialCode: `int main() {\n    int numero = 50;\n    // Declara el puntero p (solo decláralo)\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int numero = 50;\n    int *p;\n    return 0;\n}`,
+                memoryInit: { 
+                '0x7FF0': { name: 'numero', value: 50, type: 'int' },
+                '0x7FF4': { name: 'p', value: '???', type: 'int*' }
+                },
+                hint: "Escribe: int *p;",
+                validation: (code) => {
+                if (!/int\s*\*\s*p\s*;/.test(code)) return { valid: false, error: "Declara el puntero así: ``int *p;``" };
+                return { valid: true, output: "" };
+                },
+                explanation: "El asterisco junto al tipo (``int *``) le dice a C: 'p va a guardar la dirección de un entero'."
+            },
+            {
+                id: 3,
+                title: "Inicializar el Puntero",
+                instruction: "El puntero ``p`` está vacío. Vamos a guardar la dirección de ``numero`` en él. Escribe ``p = &numero;``.",
+                initialCode: `int main() {\n    int numero = 50;\n    int *p;\n    // Asigna la dirección de numero a p\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int numero = 50;\n    int *p;\n    p = &numero;\n    return 0;\n}`,
+                memoryInit: { 
+                '0x7FF0': { name: 'numero', value: 50, type: 'int' },
+                '0x7FF4': { name: 'p', value: '???', type: 'int*' }
+                },
+                hint: "Usa el operador de dirección: p = &numero;",
+                validation: (code) => {
+                if (!/p\s*=\s*&numero\s*;/.test(code)) return { valid: false, error: "Asigna la dirección: ``p = &numero;``" };
+                return { 
+                    valid: true, 
+                    output: "Puntero conectado.", 
+                    memoryUpdate: { '0x7FF4': { name: 'p', value: '0x7FF0', type: 'int*', isPointer: true } }
+                };
+                },
+                explanation: "¡Mira la tabla de memoria! Ahora el VALOR de ``p`` es ``0x7FF0``, que es la DIRECCIÓN de ``numero``."
+            },
+            {
+                id: 4,
+                title: "Lectura Indirecta (*)",
+                instruction: "Podemos ver el valor de ``numero`` usando solo ``p``. Esto se llama 'desreferenciar'. Imprime el valor usando ``*p``.",
+                initialCode: `int main() {\n    int numero = 50;\n    int *p = &numero;\n    // Imprime *p usando %d\n    printf("Valor via puntero: %d", /* completa aquí */);\n    return 0;\n}`,
+                solution: `int main() {\n    int numero = 50;\n    int *p = &numero;\n    printf("Valor via puntero: %d", *p);\n    return 0;\n}`,
+                memoryInit: { 
+                '0x7FF0': { name: 'numero', value: 50, type: 'int' },
+                '0x7FF4': { name: 'p', value: '0x7FF0', type: 'int*', isPointer: true }
+                },
+                hint: "Pasa *p como argumento al printf.",
+                validation: (code) => {
+                if (!/printf.*,\s*\*p\s*\)/.test(code)) return { valid: false, error: "Debes poner ``*p`` dentro del printf." };
+                return { valid: true, output: "Valor via puntero: 50" };
+                },
+                explanation: "El asterisco aquí funciona como una llave. ``*p`` significa: 'Ve a la dirección que tiene p y dime qué hay allí'."
+            },
+            {
+                id: 5,
+                title: "Escritura Indirecta",
+                instruction: "También podemos MODIFICAR ``numero`` a través de ``p``. Escribe ``*p = 100;`` y verás cómo cambia la variable original.",
+                initialCode: `int main() {\n    int numero = 50;\n    int *p = &numero;\n    // Cambia el valor a 100 usando el puntero\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int numero = 50;\n    int *p = &numero;\n    *p = 100;\n    return 0;\n}`,
+                memoryInit: { 
+                '0x7FF0': { name: 'numero', value: 50, type: 'int' },
+                '0x7FF4': { name: 'p', value: '0x7FF0', type: 'int*', isPointer: true }
+                },
+                hint: "Igual que si fuera la variable: *p = 100;",
+                validation: (code) => {
+                if (!/\*p\s*=\s*100\s*;/.test(code)) return { valid: false, error: "Usa ``*p = 100;``" };
+                return { 
+                    valid: true, 
+                    output: "Valor modificado remotamente.", 
+                    memoryUpdate: { '0x7FF0': { name: 'numero', value: 100, type: 'int' } }
+                };
+                },
+                explanation: "¡Magia! No tocaste ``numero``, pero su valor cambió porque accediste a su dirección de memoria."
+            },
+            {
+                id: 6,
+                title: "Puntero Nulo (NULL)",
+                instruction: "Un puntero que no apunta a nada es peligroso. Es buena práctica inicializarlo a ``NULL`` si no tienes dirección todavía. Declara ``int *ptr = NULL;``.",
+                initialCode: `int main() {\n    // Declara puntero nulo\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int *ptr = NULL;\n    return 0;\n}`,
+                memoryInit: { '0x0000': { name: 'NULL', value: 0, type: 'void' } },
+                hint: "Escribe: int *ptr = NULL;",
+                validation: (code) => {
+                if (!/int\s*\*\s*ptr\s*=\s*NULL\s*;/.test(code)) return { valid: false, error: "Usa mayúsculas para NULL: ``int *ptr = NULL;``" };
+                return { 
+                    valid: true, 
+                    output: "",
+                    memoryUpdate: { '0x7FF4': { name: 'ptr', value: '0x0000', type: 'int*', isPointer: true } }
+                };
+                },
+                explanation: "NULL es una constante que vale 0. Sirve para indicar que el puntero está 'desconectado'."
+            },
+            {
+                id: 7,
+                title: "Arrays y Punteros",
+                instruction: "El nombre de un array ¡es en realidad un puntero a su primer elemento! Declara un puntero ``p`` y asígnale ``arr`` (sin &).",
+                initialCode: `int main() {\n    int arr[] = {10, 20, 30};\n    // Declara puntero p y asignale arr\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int arr[] = {10, 20, 30};\n    int *p = arr;\n    return 0;\n}`,
+                memoryInit: { 
+                '0x8000': { name: 'arr[0]', value: 10, type: 'int' },
+                '0x8004': { name: 'arr[1]', value: 20, type: 'int' },
+                '0x8008': { name: 'arr[2]', value: 30, type: 'int' },
+                '0x9000': { name: 'p', value: '???', type: 'int*' }
+                },
+                hint: "Simplemente: int *p = arr;",
+                validation: (code) => {
+                if (!/int\s*\*\s*p\s*=\s*arr\s*;/.test(code)) return { valid: false, error: "No uses &: ``int *p = arr;``" };
+                return { 
+                    valid: true, 
+                    output: "Array apuntado.", 
+                    memoryUpdate: { '0x9000': { name: 'p', value: '0x8000', type: 'int*', isPointer: true } }
+                };
+                },
+                explanation: "En C, ``arr`` es sinónimo de ``&arr[0]``. Por eso apuntan al mismo sitio."
+            },
+            {
+                id: 8,
+                title: "Aritmética de Punteros",
+                instruction: "Si sumas 1 a un puntero, ¡no suma 1 byte! Salta al siguiente elemento entero (4 bytes). Haz ``p++`` para moverte al siguiente número del array.",
+                initialCode: `int main() {\n    int arr[] = {10, 20, 30};\n    int *p = arr;\n    // Mueve el puntero\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int arr[] = {10, 20, 30};\n    int *p = arr;\n    p++;\n    return 0;\n}`,
+                memoryInit: { 
+                '0x8000': { name: 'arr[0]', value: 10, type: 'int' },
+                '0x8004': { name: 'arr[1]', value: 20, type: 'int' },
+                '0x8008': { name: 'arr[2]', value: 30, type: 'int' },
+                '0x9000': { name: 'p', value: '0x8000', type: 'int*', isPointer: true }
+                },
+                hint: "Usa el incremento: p++;",
+                validation: (code) => {
+                if (!/p\+\+\s*;/.test(code)) return { valid: false, error: "Solo escribe: ``p++;``" };
+                return { 
+                    valid: true, 
+                    output: "Salto de 4 bytes.", 
+                    memoryUpdate: { '0x9000': { name: 'p', value: '0x8004', type: 'int*', isPointer: true } }
+                };
+                },
+                explanation: "Como es un puntero ``int``, sabe que cada número ocupa 4 bytes, así que salta automáticamente a la siguiente casilla válida."
+            },
+            {
+                id: 9,
+                title: "Acceso sin Corchetes",
+                instruction: "Podemos acceder al array sin usar `[]`. La expresión `*(p + 1)` es lo mismo que `arr[1]`. Imprime el segundo elemento del array usando esta sintaxis.",
+                initialCode: `int main() {\n    int arr[] = {10, 20, 30};\n    int *p = arr;\n    // Imprime el 20 usando *(p + 1)\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int arr[] = {10, 20, 30};\n    int *p = arr;\n    printf("%d", *(p + 1));\n    return 0;\n}`,
+                memoryInit: { '0x8000': { name: 'arr[0]', value: 10, type: 'int' }, '0x8004': { name: 'arr[1]', value: 20, type: 'int' }, '0x9000': { name: 'p', value: '0x8000', type: 'int*', isPointer: true } },
+                hint: "Usa paréntesis para la suma antes del asterisco: printf(\"%d\", *(p + 1));",
+                validation: (code) => {
+                    if (!/printf.*\*\(p\s*\+\s*1\)/.test(code)) return { valid: false, error: "Debes usar la sintaxis de puntero ``*(p + 1)``." };
+                    return { valid: true, output: "20" };
+                },
+                explanation: "Esta es la ventaja: C convierte internamente ``arr[i]`` a ``*(arr + i)``. ¡Estás escribiendo como el compilador!"
+            },
+            {
+                id: 10,
+                title: "Recorrer Array con Puntero",
+                instruction: "En lugar de un índice `i`, usa el puntero como iterador. Crea un bucle `while(*p != 0)` (asumiendo que el 0 marca el final) e imprime e incrementa `p`.",
+                initialCode: `int main() {\n    int arr[] = {10, 20, 30, 0}; // 0 es el fin\n    int *p = arr;\n    while( /* mientras el valor apuntado no sea 0 */ ) {\n        printf("%d ", *p);\n        p++;\n    }\n    return 0;\n}`,
+                solution: `int main() {\n    int arr[] = {10, 20, 30, 0};\n    int *p = arr;\n    while(*p != 0) {\n        printf("%d ", *p);\n        p++;\n    }\n    return 0;\n}`,
+                memoryInit: { '0x8000': { name: 'arr[0]', value: 10, type: 'int' }, '0x8004': { name: 'arr[1]', value: 20, type: 'int' }, '0x8008': { name: 'arr[2]', value: 30, type: 'int' }, '0x800C': { name: 'arr[3]', value: 0, type: 'int' } },
+                hint: "La condición es: *p != 0. Dentro imprime *p y luego avanza con p++.",
+                validation: (code) => {
+                    if (!/while\s*\(\s*\*\s*p\s*!=\s*0\s*\)/.test(code)) return { valid: false, error: "La condición del while debe verificar el valor apuntado: ``*p != 0``" };
+                    if (!/p\+\+/.test(code)) return { valid: false, error: "No olvides incrementar el puntero ``p++`` dentro del bucle." };
+                    return { valid: true, output: "10 20 30 ", memoryUpdate: { '0x9000': { name: 'p', value: '0x800C', type: 'int*', isPointer: true } } };
+                },
+                explanation: "Esta forma de recorrer arrays es muy rápida porque el procesador solo tiene que sumar, no tiene que multiplicar índice por tamaño cada vez."
+            },
+            {
+                id: 11,
+                title: "Resta de Punteros",
+                instruction: "Si restas dos punteros, C te dice cuántos elementos hay entre ellos. Resta `end - start` e imprime el resultado.",
+                initialCode: `int main() {\n    int arr[] = {10, 20, 30, 40, 50};\n    int *start = &arr[0];\n    int *end = &arr[4];\n    // Calcula e imprime la distancia (resta)\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int arr[] = {10, 20, 30, 40, 50};\n    int *start = &arr[0];\n    int *end = &arr[4];\n    printf("%ld", end - start);\n    return 0;\n}`,
+                memoryInit: { '0x8000': { name: 'start', value: '0x8000', type: 'int*' }, '0x8010': { name: 'end', value: '0x8010', type: 'int*' } },
+                hint: "Solo escribe: printf(\"%ld\", end - start); Se usa %ld porque el resultado es un 'long int'.",
+                validation: (code) => {
+                    if (!/end\s*-\s*start/.test(code)) return { valid: false, error: "Debes restar ``end - start``." };
+                    return { valid: true, output: "4" };
+                },
+                explanation: "La respuesta es 4 (elementos), no 16 (bytes). C divide automáticamente la diferencia de direcciones entre el tamaño del tipo (`sizeof(int)`)."
+            },
+            {
+                id: 12,
+                title: "Punteros a Char (Strings)",
+                instruction: "Las cadenas son punteros. `char *s = \"Hola\";`. Intenta cambiar la primera letra `*s = 'X';`. (Esto fallaría en la vida real porque es memoria de solo lectura, aquí lo simularemos).",
+                initialCode: `int main() {\n    char *s = "Hola";\n    printf("Original: %s\\n", s);\n    // Intenta cambiar la primera letra\n    *s = 'X';\n    return 0;\n}`,
+                solution: `int main() {\n    char *s = "Hola";\n    *s = 'X';\n    return 0;\n}`,
+                memoryInit: { '0xRODATA': { name: '"Hola"', value: 'Solo Lectura', type: 'string_literal' }, '0xS1': { name: 's', value: '0xRODATA', type: 'char*', isPointer: true } },
+                hint: "Solo escribe la asignación: *s = 'X';",
+                validation: (code) => {
+                    if (!/\*s\s*=\s*'X'/.test(code)) return { valid: false, error: "Escribe ``*s = 'X';``" };
+                    return { valid: false, error: "Segmentation Fault (Core Dumped). No puedes modificar un string literal." };
+                },
+                explanation: "¡Error de Segmentación! Definir strings con `char *` los guarda en memoria de solo lectura. Para editarlos, debes usar arrays."
+            },
+            {
+                id: 13,
+                title: "Arrays de Char (Editables)",
+                instruction: "Ahora usa `char s[] = \"Hola\";`. Esto COPIA el texto al Stack (memoria editable). Cambia la 'H' por 'B' e imprime.",
+                initialCode: `int main() {\n    char s[] = "Hola";\n    // Cambia la primera letra a 'B' usando puntero o indice\n    \n    printf("%s", s);\n    return 0;\n}`,
+                solution: `int main() {\n    char s[] = "Hola";\n    s[0] = 'B';\n    printf("%s", s);\n    return 0;\n}`,
+                memoryInit: { '0xSTACK': { name: 's[]', value: "Hola", type: 'char[]' } },
+                hint: "Usa: s[0] = 'B'; o *s = 'B';",
+                validation: (code) => {
+                    if (!/s\[0\]\s*=\s*'B'/.test(code) && !/\*s\s*=\s*'B'/.test(code)) return { valid: false, error: "Asigna 'B' al inicio: ``s[0] = 'B';``" };
+                    return { valid: true, output: "Bola" };
+                },
+                explanation: "¡Funciona! `char []` reserva memoria nueva y copia el texto ahí, por lo que es tuyo para modificarlo."
+            },
+            {
+                id: 14,
+                title: "Tu propio strlen",
+                instruction: "Vamos a crear nuestra versión de `strlen` (contar longitud). Usa un puntero auxiliar para recorrer hasta encontrar `\\0` (fin de string).",
+                initialCode: `int main() {\n    char *s = "Code";\n    int len = 0;\n    while( /* el caracter no sea '\\0' */ ) {\n        // Avanza puntero y contador\n    }\n    printf("Longitud: %d", len);\n    return 0;\n}`,
+                solution: `int main() {\n    char *s = "Code";\n    int len = 0;\n    while(*s != '\\0') {\n        len++;\n        s++;\n    }\n    printf("Longitud: %d", len);\n    return 0;\n}`,
+                memoryInit: { '0x100': { name: 's', value: 'Code', type: 'char*' } },
+                hint: "Condición: *s != '\\0'. Cuerpo: len++; s++;",
+                validation: (code) => {
+                    if (!/while\s*\(\s*\*\s*s\s*!=\s*'\\0'\s*\)/.test(code)) return { valid: false, error: "Busca el carácter nulo: ``*s != '\\0'``" };
+                    if (!/s\+\+/.test(code)) return { valid: false, error: "Avanza el puntero s++" };
+                    return { valid: true, output: "Longitud: 4" };
+                },
+                explanation: "Así funcionan las funciones de string en C: recorren memoria hasta encontrar el byte 0."
+            },
+            {
+                id: 15,
+                title: "¿Por qué punteros? Paso por Valor",
+                instruction: "Mira este código. La función intenta cambiar `val` pero falla porque recibe una COPIA. Ejecútalo para ver el fallo.",
+                initialCode: `void cambiar(int x) {\n    x = 999;\n}\n\nint main() {\n    int val = 10;\n    cambiar(val);\n    printf("Valor: %d", val);\n    return 0;\n}`,
+                solution: `// Solo ejecuta`,
+                memoryInit: { '0xS1': { name: 'val', value: 10, type: 'int' } },
+                hint: "Solo dale a Ejecutar. Quiero que veas que imprime 10, no 999.",
+                validation: (code) => {
+                    return { valid: true, output: "Valor: 10" };
+                },
+                explanation: "C pasa los argumentos por VALOR (copia). La función `cambiar` modificó su propia copia `x`, no la variable `val` original."
+            },
+            {
+                id: 16,
+                title: "Paso por Referencia (Solución)",
+                instruction: "Arregla el código anterior. Cambia la función para que reciba `int *x` y usa `*x = 999`. En el main, pasa la dirección `&val`.",
+                initialCode: `// Modifica la función para recibir un puntero\nvoid cambiar(int x) {\n    x = 999;\n}\n\nint main() {\n    int val = 10;\n    // Pasa la dirección aquí\n    cambiar(val);\n    printf("Valor: %d", val);\n    return 0;\n}`,
+                solution: `void cambiar(int *x) {\n    *x = 999;\n}\n\nint main() {\n    int val = 10;\n    cambiar(&val);\n    printf("Valor: %d", val);\n    return 0;\n}`,
+                memoryInit: { '0xS1': { name: 'val', value: 10, type: 'int' } },
+                hint: "Firma: void cambiar(int *x). Cuerpo: *x = 999. Llamada: cambiar(&val).",
+                validation: (code) => {
+                    if (!/void\s+cambiar\s*\(\s*int\s*\*\s*x\s*\)/.test(code)) return { valid: false, error: "La función debe recibir un puntero: ``int *x``" };
+                    if (!/\*x\s*=\s*999/.test(code)) return { valid: false, error: "Dentro de la función, usa el operador de desreferencia: ``*x = 999``" };
+                    if (!/cambiar\s*\(\s*&val\s*\)/.test(code)) return { valid: false, error: "Llama a la función pasando la dirección: ``cambiar(&val)``" };
+                    return { valid: true, output: "Valor: 999", memoryUpdate: { '0xS1': { name: 'val', value: 999, type: 'int' } } };
+                },
+                explanation: "¡Esta es la razón #1 para usar punteros! Permiten que las funciones modifiquen datos fuera de su propio ámbito."
+            },
+            {
+                id: 17,
+                title: "El Reto Swap",
+                instruction: "Crea una función (simulada aquí dentro del main por simplicidad) que intercambie los valores de `a` y `b` usando punteros y una variable temporal.",
+                initialCode: `int main() {\n    int a = 5, b = 10;\n    int *pa = &a, *pb = &b;\n    \n    // Usa 'temp' para intercambiar *pa y *pb\n    int temp = \n    \n    printf("a=%d b=%d", a, b);\n    return 0;\n}`,
+                solution: `int main() {\n    int a = 5, b = 10;\n    int *pa = &a, *pb = &b;\n    int temp = *pa;\n    *pa = *pb;\n    *pb = temp;\n    printf("a=%d b=%d", a, b);\n    return 0;\n}`,
+                memoryInit: { '0xA': { name: 'a', value: 5, type: 'int' }, '0xB': { name: 'b', value: 10, type: 'int' } },
+                hint: "Guarda *pa en temp. Pon *pb en *pa. Pon temp en *pb.",
+                validation: (code) => {
+                    if (!/temp\s*=\s*\*pa/.test(code)) return { valid: false, error: "Guarda el valor de A: ``temp = *pa;``" };
+                    if (!/\*pa\s*=\s*\*pb/.test(code)) return { valid: false, error: "Sobreescribe A con B: ``*pa = *pb;``" };
+                    if (!/\*pb\s*=\s*temp/.test(code)) return { valid: false, error: "Restaura el valor guardado en B: ``*pb = temp;``" };
+                    return { valid: true, output: "a=10 b=5", memoryUpdate: { '0xA': { name: 'a', value: 10, type: 'int' }, '0xB': { name: 'b', value: 5, type: 'int' } } };
+                },
+                explanation: "El 'swap' es imposible en C sin punteros. Has manipulado directamente las casillas de memoria de a y b."
+            },
+            {
+                id: 18,
+                title: "Punteros a Punteros (**)",
+                instruction: "Un puntero tiene su propia dirección. Podemos tener un puntero que apunte a eso. Declara `int **pp` y asígnale la dirección de `p`.",
+                initialCode: `int main() {\n    int val = 100;\n    int *p = &val;\n    // Declara pp que apunte a p\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int val = 100;\n    int *p = &val;\n    int **pp = &p;\n    return 0;\n}`,
+                memoryInit: { '0xV': { name: 'val', value: 100, type: 'int' }, '0xP': { name: 'p', value: '0xV', type: 'int*', isPointer: true } },
+                hint: "Usa dos asteriscos: int **pp = &p;",
+                validation: (code) => {
+                    if (!/int\s*\*\*\s*pp\s*=\s*&p\s*;/.test(code)) return { valid: false, error: "Declara: ``int **pp = &p;``" };
+                    return { valid: true, output: "Doble indirección establecida.", memoryUpdate: { '0xPP': { name: 'pp', value: '0xP', type: 'int**', isPointer: true } } };
+                },
+                explanation: "Se usa `**pp` cuando quieres cambiar a quién apunta el puntero original dentro de una función (paso de puntero por referencia)."
+            },
+            {
+                id: 19,
+                title: "Doble Desreferencia",
+                instruction: "Para llegar al valor 100 desde `pp`, necesitas cruzar dos puentes. Usa `**pp` para imprimir el valor.",
+                initialCode: `int main() {\n    int val = 100;\n    int *p = &val;\n    int **pp = &p;\n    // Imprime val usando pp\n    printf("Valor: %d", );\n    return 0;\n}`,
+                solution: `int main() {\n    int val = 100;\n    int *p = &val;\n    int **pp = &p;\n    printf("Valor: %d", **pp);\n    return 0;\n}`,
+                memoryInit: { '0xV': { name: 'val', value: 100, type: 'int' }, '0xP': { name: 'p', value: '0xV', type: 'int*', isPointer: true }, '0xPP': { name: 'pp', value: '0xP', type: 'int**', isPointer: true } },
+                hint: "Pon **pp dentro del printf.",
+                validation: (code) => {
+                    if (!/printf.*,\s*\*\*pp\s*\)/.test(code)) return { valid: false, error: "Usa ``**pp`` para acceder al valor final." };
+                    return { valid: true, output: "Valor: 100" };
+                },
+                explanation: "`*pp` te da la dirección de `val`. `**pp` te da el contenido de `val`. Es como seguir un mapa del tesoro en dos pasos."
+            },
+            {
+                id: 20,
+                title: "Structs y Punteros",
+                instruction: "Los structs agrupan datos. Declara una estructura punto: `struct Point { int x; int y; };` y crea una variable `p1`.",
+                initialCode: `// Define el struct aquí arriba\n\nint main() {\n    struct Point p1;\n    p1.x = 10;\n    return 0;\n}`,
+                solution: `struct Point { int x; int y; };\nint main() {\n    struct Point p1;\n    p1.x = 10;\n    return 0;\n}`,
+                memoryInit: {},
+                hint: "Escribe la definición del struct fuera del main.",
+                validation: (code) => {
+                    if (!/struct\s+Point\s*\{\s*int\s+x;\s*int\s+y;\s*\}\s*;/.test(code.replace(/\n/g, ' '))) return { valid: false, error: "Define: ``struct Point { int x; int y; };``" };
+                    return { valid: true, output: "Struct definido." };
+                },
+                explanation: "Los structs son la base de los objetos en lenguajes modernos. En C, solemos manejarlos con punteros para no copiar todos los datos."
+            },
+            {
+                id: 21,
+                title: "Puntero a Struct",
+                instruction: "Declara un puntero `struct Point *ptr = &p1;`. Intenta acceder a `x`. La precedencia requiere paréntesis: `(*ptr).x`. Imprímelo.",
+                initialCode: `struct Point { int x; int y; };\nint main() {\n    struct Point p1 = {10, 20};\n    // Declara puntero ptr\n    \n    printf("%d", /* accede a x */);\n    return 0;\n}`,
+                solution: `struct Point { int x; int y; };\nint main() {\n    struct Point p1 = {10, 20};\n    struct Point *ptr = &p1;\n    printf("%d", (*ptr).x);\n    return 0;\n}`,
+                memoryInit: { '0xS1': { name: 'p1', value: '{10, 20}', type: 'struct' } },
+                hint: "Declara el puntero y usa: (*ptr).x. Los paréntesis son obligatorios porque el punto '.' gana al asterisco '*'.",
+                validation: (code) => {
+                    if (!/struct\s+Point\s*\*\s*ptr\s*=\s*&p1/.test(code)) return { valid: false, error: "Declara: ``struct Point *ptr = &p1;``" };
+                    if (!/\(\*ptr\)\.x/.test(code)) return { valid: false, error: "Usa paréntesis: ``(*ptr).x``" };
+                    return { valid: true, output: "10" };
+                },
+                explanation: "Escribir `(*ptr).x` es engorroso. Por eso C inventó algo mejor..."
+            },
+            {
+                id: 22,
+                title: "El Operador Flecha (->)",
+                instruction: "¡Simplifica tu vida! `ptr->x` es exactamente lo mismo que `(*ptr).x`. Cambia el código para usar la flecha.",
+                initialCode: `struct Point { int x; int y; };\nint main() {\n    struct Point p1 = {10, 20};\n    struct Point *ptr = &p1;\n    // Usa la flecha ->\n    printf("%d", ptr->x);\n    return 0;\n}`,
+                solution: `struct Point { int x; int y; };\nint main() {\n    struct Point p1 = {10, 20};\n    struct Point *ptr = &p1;\n    printf("%d", ptr->x);\n    return 0;\n}`,
+                memoryInit: { '0xS1': { name: 'p1', value: '{10, 20}', type: 'struct' } },
+                hint: "Usa un guión y un mayor que: ptr->x",
+                validation: (code) => {
+                    if (!/ptr->x/.test(code)) return { valid: false, error: "Usa el operador flecha: ``ptr->x``" };
+                    return { valid: true, output: "10" };
+                },
+                explanation: "Verás este operador por todas partes en C (listas enlazadas, árboles, sistemas). Significa 'sigue el puntero y dame el campo'."
+            },
+            {
+                id: 23,
+                title: "Memoria Dinámica (malloc)",
+                instruction: "Hasta ahora usamos el 'Stack' (automático). Para memoria manual y duradera, usamos el 'Heap'. Pide espacio para un entero: `int *p = (int*)malloc(sizeof(int));`.",
+                initialCode: `#include <stdlib.h>\nint main() {\n    // Pide memoria\n    \n    return 0;\n}`,
+                solution: `#include <stdlib.h>\nint main() {\n    int *p = (int*)malloc(sizeof(int));\n    return 0;\n}`,
+                memoryInit: {},
+                hint: "malloc devuelve void*, así que haz casting a (int*). Usa sizeof(int) para saber cuántos bytes necesitas.",
+                validation: (code) => {
+                    if (!/malloc\s*\(\s*sizeof\s*\(\s*int\s*\)\s*\)/.test(code)) return { valid: false, error: "Llama a ``malloc(sizeof(int))``" };
+                    return { valid: true, output: "Memoria reservada en Heap.", memoryUpdate: { '0xHEAP1': { name: 'malloc_block', value: 0, type: 'int (Heap)' }, '0xSTACK1': { name: 'p', value: '0xHEAP1', type: 'int*', isPointer: true } } };
+                },
+                explanation: "`malloc` busca espacio libre en el montón (heap) y te da su dirección. ¡Esta memoria sobrevive aunque termine la función!"
+            },
+            {
+                id: 24,
+                title: "Usando el Heap",
+                instruction: "Ahora `p` apunta a una memoria anónima en el Heap. Úsalo como cualquier puntero: guarda el valor 500 ahí.",
+                initialCode: `#include <stdlib.h>\nint main() {\n    int *p = (int*)malloc(sizeof(int));\n    // Guarda 500 en esa dirección\n    \n    return 0;\n}`,
+                solution: `#include <stdlib.h>\nint main() {\n    int *p = (int*)malloc(sizeof(int));\n    *p = 500;\n    return 0;\n}`,
+                memoryInit: { '0xHEAP1': { name: 'malloc_block', value: 0, type: 'int (Heap)' }, '0xSTACK1': { name: 'p', value: '0xHEAP1', type: 'int*', isPointer: true } },
+                hint: "Usa el asterisco: *p = 500;",
+                validation: (code) => {
+                    if (!/\*p\s*=\s*500/.test(code)) return { valid: false, error: "Usa ``*p = 500;``" };
+                    return { valid: true, output: "Valor guardado en Heap.", memoryUpdate: { '0xHEAP1': { name: 'malloc_block', value: 500, type: 'int (Heap)' } } };
+                },
+                explanation: "Has guardado datos fuera de la pila de ejecución normal. Esto es esencial para estructuras de datos que crecen (listas, vectores)."
+            },
+            {
+                id: 25,
+                title: "Liberar Memoria (free)",
+                instruction: "¡Crítico! C no tiene recolección de basura. Si no liberas la memoria, se queda ocupada (memory leak). Usa `free(p);` al final.",
+                initialCode: `#include <stdlib.h>\nint main() {\n    int *p = (int*)malloc(sizeof(int));\n    *p = 500;\n    // Libera la memoria\n    \n    return 0;\n}`,
+                solution: `#include <stdlib.h>\nint main() {\n    int *p = (int*)malloc(sizeof(int));\n    *p = 500;\n    free(p);\n    return 0;\n}`,
+                memoryInit: { '0xHEAP1': { name: 'malloc_block', value: 500, type: 'int (Heap)' }, '0xSTACK1': { name: 'p', value: '0xHEAP1', type: 'int*', isPointer: true } },
+                hint: "Solo escribe: free(p);",
+                validation: (code) => {
+                    if (!/free\s*\(\s*p\s*\)/.test(code)) return { valid: false, error: "Usa ``free(p);``" };
+                    return { valid: true, output: "Memoria liberada.", memoryUpdate: { '0xHEAP1': { name: 'LIBERADO', value: '---', type: 'trash' } } };
+                },
+                explanation: "Un gran poder conlleva una gran responsabilidad. Si olvidas el `free`, tu programa consumirá toda la RAM eventualmente."
+            },
+            {
+                id: 26,
+                title: "Arrays Dinámicos",
+                instruction: "Puedes pedir espacio para MUCHOS enteros a la vez. Pide espacio para 5 enteros: `malloc(5 * sizeof(int))`.",
+                initialCode: `#include <stdlib.h>\nint main() {\n    // Pide un array de 5 ints\n    int *arr = \n    return 0;\n}`,
+                solution: `#include <stdlib.h>\nint main() {\n    int *arr = (int*)malloc(5 * sizeof(int));\n    return 0;\n}`,
+                memoryInit: {},
+                hint: "Multiplica la cantidad por el tamaño: 5 * sizeof(int).",
+                validation: (code) => {
+                    if (!/malloc\s*\(\s*5\s*\*\s*sizeof\s*\(\s*int\s*\)\s*\)/.test(code)) return { valid: false, error: "Usa ``malloc(5 * sizeof(int))``" };
+                    return { valid: true, output: "Array dinámico creado." };
+                },
+                explanation: "Ahora `arr` se comporta como un array normal `arr[0]`, `arr[1]`, pero su tamaño se decidió en tiempo de ejecución, no al compilar."
+            },
+            {
+                id: 27,
+                title: "Void Pointers (Genéricos)",
+                instruction: "Un `void *` es un puntero genérico. Puede apuntar a cualquier cosa, pero no se puede desreferenciar directamente. Declara `void *ptr = &x;` donde x es un int.",
+                initialCode: `int main() {\n    int x = 10;\n    // Declara void pointer\n    \n    return 0;\n}`,
+                solution: `int main() {\n    int x = 10;\n    void *ptr = &x;\n    return 0;\n}`,
+                memoryInit: { '0xX': { name: 'x', value: 10, type: 'int' } },
+                hint: "Escribe: void *ptr = &x;",
+                validation: (code) => {
+                    if (!/void\s*\*\s*ptr\s*=\s*&x/.test(code)) return { valid: false, error: "Declara ``void *ptr = &x;``" };
+                    return { valid: true, output: "Puntero genérico creado.", memoryUpdate: { '0xPTR': { name: 'ptr', value: '0xX', type: 'void*', isPointer: true } } };
+                },
+                explanation: "Funciones como `malloc` devuelven `void*` porque no saben qué tipo de datos vas a guardar ahí. Es tu trabajo hacer el 'cast'."
+            },
+            {
+                id: 28,
+                title: "Casting de Punteros",
+                instruction: "Para leer el valor de un `void *ptr`, debes decirle al compilador qué tipo es. Haz un casting a int pointer y desreferencia: `*(int*)ptr`.",
+                initialCode: `int main() {\n    int x = 10;\n    void *ptr = &x;\n    // Imprime el valor haciendo casting\n    printf("%d", );\n    return 0;\n}`,
+                solution: `int main() {\n    int x = 10;\n    void *ptr = &x;\n    printf("%d", *(int*)ptr);\n    return 0;\n}`,
+                memoryInit: { '0xX': { name: 'x', value: 10, type: 'int' }, '0xPTR': { name: 'ptr', value: '0xX', type: 'void*', isPointer: true } },
+                hint: "Primero convierte (int*)ptr y luego pon otro asterisco delante para leer el valor: *(int*)ptr.",
+                validation: (code) => {
+                    if (!/\*\s*\(\s*int\s*\*\s*\)\s*ptr/.test(code)) return { valid: false, error: "Sintaxis de casting: ``*(int*)ptr``" };
+                    return { valid: true, output: "10" };
+                },
+                explanation: "Has completado el laboratorio de punteros. Desde direcciones básicas hasta memoria dinámica y tipos genéricos. ¡Eres un experto en memoria!"
+            }
+        ];
+
+        function loadState() {
+            const saved = localStorage.getItem('csimulator_progress');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (!parsed.progress) parsed.progress = { general: 0, pointers: 0 };
+                return parsed;
+            }
+            return {
+                mode: null,
+                progress: { general: 0, pointers: 0 }
+            };
+        }
+
+        function saveState() {
+            const dataToSave = {
+                mode: state.mode,
+                progress: state.progress
+            };
+            localStorage.setItem('csimulator_progress', JSON.stringify(dataToSave));
+        }
+
+        const initialState = loadState();
+        const state = {
+            mode: initialState.mode, 
+            progress: initialState.progress,
+            code: "",
+            output: "",
+            consoleLog: [],
+            feedback: null,
+            memory: {},
+            showHelp: false,
+            showSolution: false
+        };
+
+        const appEl = document.getElementById('app');
+        const modalEl = document.getElementById('resetModal');
+
+        function formatCodeText(text) {
+             return text.replace(/``(.*?)``/g, '<code class="bg-[var(--bg-input)] text-[var(--text-main)] px-1 rounded text-xs mx-0.5 border border-[var(--border-col)]">$1</code>');
+        }
+
+        function setTheme(themeName) {
+            document.body.classList.remove('theme-cream', 'theme-gray');
+            if (themeName === 'cream') document.body.classList.add('theme-cream');
+            if (themeName === 'gray') document.body.classList.add('theme-gray');
+        }
+
+        function renderMainMenu() {
+            appEl.innerHTML = `
+            <div class="min-h-screen bg-[var(--bg-main)] flex items-center justify-center p-4 font-sans w-full relative transition-colors duration-300">
+                
+                <div class="absolute top-4 left-4 flex gap-2">
+                    <button onclick="setTheme('dark')" class="w-6 h-6 rounded-full bg-[#1e1e1e] border border-gray-600 hover:scale-110 transition" title="Tema Oscuro"></button>
+                    <button onclick="setTheme('cream')" class="w-6 h-6 rounded-full bg-[#fdf6e3] border border-gray-400 hover:scale-110 transition" title="Tema Crema"></button>
+                    <button onclick="setTheme('gray')" class="w-6 h-6 rounded-full bg-white border border-gray-300 hover:scale-110 transition" title="Escala de Grises"></button>
+                </div>
+
+                <button onclick="openResetModal()" class="absolute top-4 right-4 text-red-400 hover:text-red-300 hover:bg-red-900/30 p-2 rounded flex items-center gap-2 text-sm transition">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reiniciar Todo
+                </button>
+
+                <div class="bg-[var(--bg-sec)] p-8 rounded-xl shadow-2xl max-w-2xl w-full border border-[var(--border-col)] transition-colors duration-300">
+                <div class="flex items-center gap-3 mb-6">
+                    <i data-lucide="cpu" class="text-[var(--accent-col)] w-10 h-10"></i>
+                    <h1 class="text-3xl font-bold text-[var(--text-main)]">CSimulator Pro</h1>
+                </div>
+                <p class="text-[var(--text-sec)] mb-8 text-lg">
+                    Aprende programación en C paso a paso. Elige tu ruta:
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <button onclick="setMode('general')" class="group bg-[var(--bg-main)] hover:border-[var(--accent-col)] border border-[var(--border-col)] p-6 rounded-lg transition-all text-left relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-4 relative z-10">
+                        <i data-lucide="code" class="text-[var(--accent-col)] w-8 h-8"></i>
+                        <span class="text-xs bg-[var(--bg-input)] px-2 py-1 rounded text-[var(--text-main)]">
+                        ${state.progress.general + 1} / ${generalLevels.length}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-[var(--text-main)] mb-2 relative z-10">Fundamentos de C</h3>
+                    <p class="text-[var(--text-sec)] text-sm relative z-10">
+                        Desde <code class="bg-[var(--bg-input)] rounded px-1">Hola Mundo</code> hasta Argumentos, Makefile, Getopt y System Calls.
+                    </p>
+                    </button>
+
+                    <button onclick="setMode('pointers')" class="group bg-[var(--bg-main)] hover:border-purple-500 border border-[var(--border-col)] p-6 rounded-lg transition-all text-left relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-4 relative z-10">
+                        <i data-lucide="hash" class="text-purple-500 w-8 h-8"></i>
+                        <span class="text-xs bg-[var(--bg-input)] px-2 py-1 rounded text-[var(--text-main)]">
+                        ${state.progress.pointers + 1} / ${pointerLevels.length}
+                        </span>
+                    </div>
+                    <h3 class="text-xl font-bold text-[var(--text-main)] mb-2 relative z-10">Laboratorio de Punteros</h3>
+                    <p class="text-[var(--text-sec)] text-sm relative z-10">
+                        Visualiza la RAM. Incluye <code class="bg-[var(--bg-input)] rounded px-1">malloc</code>, <code class="bg-[var(--bg-input)] rounded px-1">structs</code>, <code class="bg-[var(--bg-input)] rounded px-1">**pp</code> y paso por referencia.
+                    </p>
+                    </button>
+                </div>
+                </div>
+            </div>
+            `;
+            lucide.createIcons();
+        }
+
+        function renderIDE() {
+            const currentLevelIndex = state.progress[state.mode];
+            const currentLevels = state.mode === 'general' ? generalLevels : pointerLevels;
+            const currentLevel = currentLevels[currentLevelIndex];
+
+            const lines = state.code.split('\n').map((_, i) => `<div>${i + 1}</div>`).join('');
+
+            const optionsHtml = currentLevels.map((lvl, idx) => 
+                `<option value="${idx}" ${idx === currentLevelIndex ? 'selected' : ''}>
+                    ${idx + 1}. ${lvl.title}
+                </option>`
+            ).join('');
+
+            const logsHtml = state.consoleLog.map(log => {
+                const colorClass = log.startsWith('error') ? 'text-red-400' : log.startsWith('>') ? 'text-[var(--text-sec)]' : 'text-[var(--text-main)]';
+                return `<div class="${colorClass} break-words font-mono">${log}</div>`;
+            }).join('');
+
+            let memoryHtml = '';
+            if (state.mode === 'pointers') {
+                const rows = Object.entries(state.memory).map(([address, data]) => `
+                    <tr class="border-b border-[var(--border-col)] hover:bg-[var(--bg-input)] transition-colors">
+                        <td class="py-2 pl-2 text-purple-500 font-bold text-xs font-mono">${address}</td>
+                        <td class="py-2 text-[var(--accent-col)] text-xs font-mono">
+                            ${data.name} 
+                            <span class="text-[var(--text-sec)] ml-1 text-[10px]">(${data.type})</span>
+                        </td>
+                        <td class="py-2 font-bold relative text-xs font-mono text-[var(--text-main)]">
+                            <span class="${data.isPointer ? 'text-green-500' : 'text-orange-400'}">
+                                ${data.value}
+                            </span>
+                            ${data.isPointer ? `<div class="text-[10px] text-[var(--text-sec)] mt-0.5 flex items-center gap-1"><span>↳ Apunta a ${Object.keys(state.memory).includes(String(data.value)) ? data.value : 'nada'}</span></div>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+
+                memoryHtml = `
+                    <div class="space-y-4 animate-in">
+                        <div class="text-xs text-[var(--text-sec)] mb-2">// Memoria del Sistema</div>
+                        <table class="w-full border-collapse text-left">
+                            <thead>
+                                <tr class="text-[var(--text-sec)] border-b border-[var(--border-col)]">
+                                    <th class="pb-2 text-xs pl-2">Dirección (&)</th>
+                                    <th class="pb-2 text-xs">Variable</th>
+                                    <th class="pb-2 text-xs">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                        <div class="mt-8 border border-[var(--border-col)] p-3 rounded bg-[var(--bg-input)]">
+                            <h4 class="text-xs font-bold text-[var(--text-sec)] mb-2">Guía Visual:</h4>
+                            <div class="grid grid-cols-1 gap-2 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-purple-500 font-bold">&amp;</span>
+                                    <span class="text-[var(--text-sec)]">=</span>
+                                    <span class="text-[var(--text-main)]">Dirección de memoria (Columna Izq)</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-green-500 font-bold">*</span>
+                                    <span class="text-[var(--text-sec)]">=</span>
+                                    <span class="text-[var(--text-main)]">Ir a la dirección y coger el valor</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let feedbackHtml = '';
+            if (state.feedback) {
+                const isSuccess = state.feedback.type === 'success' || state.feedback.type === 'complete';
+                const borderColor = isSuccess ? (state.feedback.type === 'success' ? 'border-green-600' : 'border-blue-600') : 'border-red-600';
+                const bgColor = isSuccess ? (state.feedback.type === 'success' ? 'bg-green-900/90' : 'bg-blue-900/90') : 'bg-red-900/90';
+                const textColor = 'text-white';
+                const icon = isSuccess ? 'check-circle' : 'alert-triangle';
+                const title = state.feedback.type === 'success' ? '¡Correcto!' : state.feedback.type === 'complete' ? '¡Curso Completado!' : 'Atención';
+                const formattedMsg = formatCodeText(state.feedback.message);
+                
+                feedbackHtml = `
+                    <div class="absolute bottom-6 right-6 max-w-md p-4 rounded-lg shadow-2xl border backdrop-blur-sm animate-in ${borderColor} ${bgColor} ${textColor}">
+                        <div class="flex items-start gap-3">
+                            <i data-lucide="${icon}" class="shrink-0 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-sm mb-1">${title}</h4>
+                                <p class="text-xs leading-relaxed opacity-90">${formattedMsg}</p>
+                                ${(isSuccess && currentLevelIndex < currentLevels.length - 1) ? 
+                                    `<button onclick="nextLevel()" class="mt-3 bg-white/20 hover:bg-white/30 text-white px-4 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-all">
+                                        Siguiente Lección <i data-lucide="chevron-right" class="w-3 h-3"></i>
+                                    </button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let hintHtml = '';
+            if (state.showHelp) {
+                hintHtml = `
+                    <div class="mt-3 p-3 bg-[var(--bg-input)] border border-[var(--border-col)] rounded text-xs text-[var(--text-main)] animate-in shadow-inner">
+                        <div class="flex items-start gap-2">
+                           <span class="text-lg">💡</span>
+                           <span><strong>Pista:</strong> ${currentLevel.hint}</span>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            let solutionHtml = '';
+            if (state.showSolution) {
+                solutionHtml = `
+                    <div class="mt-3 p-3 bg-red-900/10 border border-red-500/30 rounded text-xs text-red-400 animate-in">
+                        <div class="flex flex-col gap-2">
+                           <span class="font-bold flex items-center gap-1"><i data-lucide="key" class="w-3 h-3"></i> Solución:</span>
+                           <pre class="bg-[var(--bg-main)] p-2 rounded overflow-x-auto font-mono text-[10px] select-all cursor-text text-[var(--text-main)] border border-[var(--border-col)] shadow-inner">${currentLevel.solution || "// No hay solución disponible para este nivel."}</pre>
+                        </div>
+                    </div>
+                `;
+            }
+
+
+            appEl.innerHTML = `
+                <header class="bg-[var(--bg-sec)] border-b border-[var(--border-col)] h-12 flex items-center justify-between px-4 select-none shrink-0 transition-colors duration-300">
+                    <div class="flex items-center gap-2">
+                        <button onclick="goBack()" class="mr-2 text-[var(--text-sec)] hover:text-[var(--text-main)]" title="Volver al menú">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-sans font-medium text-[var(--text-sec)] hidden sm:inline">
+                                ${state.mode === 'general' ? 'Curso Básico' : 'Lab Punteros'}:
+                            </span>
+                            <select onchange="jumpToLevel(this.value)" class="level-select font-sans">
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 items-center">
+                        <div class="flex gap-1 mr-4">
+                            <button onclick="setTheme('dark')" class="w-4 h-4 rounded-full bg-[#1e1e1e] border border-gray-600 hover:scale-110 transition" title="Oscuro"></button>
+                            <button onclick="setTheme('cream')" class="w-4 h-4 rounded-full bg-[#fdf6e3] border border-gray-400 hover:scale-110 transition" title="Crema"></button>
+                            <button onclick="setTheme('gray')" class="w-4 h-4 rounded-full bg-white border border-gray-300 hover:scale-110 transition" title="Grises"></button>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500">
+                            <div class="w-2 h-2 rounded-full bg-green-500"></div> Online
+                        </div>
+                    </div>
+                </header>
+
+                <div class="flex-1 flex flex-col md:flex-row overflow-hidden h-full">
+                    <div class="w-full md:w-1/4 bg-[var(--bg-sec)] border-r border-[var(--border-col)] flex flex-col h-full md:h-auto transition-colors duration-300">
+                        <div class="p-4 border-b border-[var(--border-col)] shrink-0">
+                            <h2 class="text-[var(--text-main)] font-bold text-lg flex items-center gap-2">
+                                <i data-lucide="book-open" class="text-[var(--accent-col)] w-4 h-4"></i> ${currentLevel.title}
+                            </h2>
+                        </div>
+                        <div class="p-4 flex-1 overflow-y-auto">
+                            <p class="mb-4 text-sm leading-relaxed text-[var(--text-main)]">
+                                ${formatCodeText(currentLevel.instruction)}
+                            </p>
+                            
+                            <div class="flex flex-col gap-2 mt-2">
+                                <button onclick="toggleHelp()" class="flex items-center gap-2 text-xs text-[var(--accent-col)] hover:opacity-80 focus:outline-none w-full text-left">
+                                    <i data-lucide="help-circle" class="w-3 h-3"></i> ${state.showHelp ? 'Ocultar Pista' : 'Necesito una pista'}
+                                </button>
+                                
+                                <button onclick="toggleSolution()" class="flex items-center gap-2 text-xs text-red-400 hover:text-red-300 focus:outline-none w-full text-left">
+                                    <i data-lucide="unlock" class="w-3 h-3"></i> ${state.showSolution ? 'Ocultar Solución' : 'Necesito la solución'}
+                                </button>
+                            </div>
+
+                            ${hintHtml}
+                            ${solutionHtml}
+                        </div>
+                        <div class="p-4 border-t border-[var(--border-col)] shrink-0">
+                            <button onclick="handleCompile()" class="w-full bg-green-700 hover:bg-green-600 text-white py-2 rounded flex items-center justify-center gap-2 font-bold transition-colors shadow-lg hover:shadow-green-900/20 active:scale-95 duration-100">
+                                <i data-lucide="play" class="w-4 h-4 fill-current"></i> Ejecutar Código
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 flex flex-col relative bg-[var(--code-bg)] overflow-hidden transition-colors duration-300">
+                        <div class="absolute top-0 left-0 w-10 h-full bg-[var(--bg-main)] border-r border-[var(--border-col)] flex flex-col items-end pt-4 pr-2 text-[var(--text-sec)] text-xs select-none font-mono">
+                            ${lines}
+                        </div>
+                        <textarea id="codeEditor" 
+                            oninput="updateCode(this.value)"
+                            class="flex-1 bg-transparent text-[var(--text-main)] p-4 pl-12 font-mono text-sm resize-none focus:outline-none leading-relaxed custom-scrollbar selection:bg-[var(--accent-col)]/30 w-full h-full"
+                            spellcheck="false">${state.code}</textarea>
+                        
+                        ${feedbackHtml}
+                    </div>
+
+                    <div class="w-full md:w-1/3 bg-[var(--bg-main)] border-l border-[var(--border-col)] flex flex-col h-1/3 md:h-auto border-t md:border-t-0 transition-colors duration-300">
+                        <div class="flex border-b border-[var(--border-col)] shrink-0">
+                            <div class="px-4 py-2 text-xs uppercase font-bold text-[var(--text-main)] border-b-2 ${state.mode === 'pointers' ? 'border-purple-500' : 'border-[var(--accent-col)]'} bg-[var(--bg-sec)] w-full">
+                                ${state.mode === 'pointers' ? 'Visualizador de RAM' : 'Consola de Salida'}
+                            </div>
+                        </div>
+                        <div class="flex-1 p-4 overflow-y-auto font-mono text-sm bg-[var(--console-bg)] custom-scrollbar border-l border-[var(--border-col)]">
+                            ${state.mode === 'pointers' ? memoryHtml : 
+                                `<div class="space-y-1">
+                                    ${logsHtml}
+                                    <div class="flex items-center gap-1 text-gray-500 mt-2 animate-pulse">
+                                        <i data-lucide="terminal" class="w-3 h-3"></i> <span>_</span>
+                                    </div>
+                                </div>`
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="h-6 bg-[#007acc] flex items-center justify-between px-3 text-white text-xs select-none shrink-0 transition-colors duration-300">
+                    <div class="flex gap-4">
+                        <span>${state.mode === 'pointers' ? 'memoria_lab.c' : 'ejercicios.c'}</span>
+                        <span>Ln ${state.code.split('\n').length}, Col 1</span>
+                    </div>
+                    <div class="flex gap-4">
+                        <span>UTF-8</span>
+                        <span>GCC 12.0 (Simulated)</span>
+                    </div>
+                </footer>
+            `;
+            lucide.createIcons();
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            saveState(); 
+            if (mode) {
+                loadLevel();
+            } else {
+                renderMainMenu();
+            }
+        }
+
+        function loadLevel() {
+            const index = state.progress[state.mode];
+            const levels = state.mode === 'general' ? generalLevels : pointerLevels;
+            const level = levels[index];
+
+            state.code = level.initialCode;
+            state.output = "";
+            state.consoleLog = [`gcc simulador: Iniciando Nivel ${level.id}...`, "Esperando código..."];
+            state.feedback = null;
+            state.showHelp = false;
+            state.showSolution = false;
+
+            if (state.mode === 'pointers') {
+                state.memory = level.memoryInit ? JSON.parse(JSON.stringify(level.memoryInit)) : {};
+            }
+
+            renderIDE();
+        }
+        
+        function jumpToLevel(index) {
+            const idx = parseInt(index);
+            state.progress[state.mode] = idx;
+            saveState(); 
+            loadLevel();
+        }
+
+        function updateCode(newCode) {
+            state.code = newCode;
+            const oldLines = document.querySelector('.absolute.top-0').childElementCount;
+            const newLines = newCode.split('\n').length;
+            if (oldLines !== newLines) {
+                renderIDE();
+                const textarea = document.getElementById('codeEditor');
+                textarea.focus();
+                textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+            }
+        }
+
+        function toggleHelp() {
+            state.showHelp = !state.showHelp;
+            if (state.showHelp) state.showSolution = false; 
+            renderIDE();
+        }
+
+        function toggleSolution() {
+            state.showSolution = !state.showSolution;
+            if (state.showSolution) state.showHelp = false; 
+            renderIDE();
+        }
+
+        function handleCompile() {
+            const index = state.progress[state.mode];
+            const levels = state.mode === 'general' ? generalLevels : pointerLevels;
+            const level = levels[index];
+            
+            const execCmd = level.execArgs ? "./main " + level.execArgs : "./main";
+            state.consoleLog.push("> gcc main.c -o main && " + execCmd);
+            
+            renderIDE();
+
+            setTimeout(() => {
+                try {
+                    const result = level.validation(state.code);
+
+                    if (result.valid) {
+                        state.consoleLog.push(result.output || "Ejecución correcta.");
+                        state.output = result.output;
+                        state.feedback = { type: 'success', message: level.explanation };
+                        
+                        if (state.mode === 'pointers' && result.memoryUpdate) {
+                            state.memory = { ...state.memory, ...result.memoryUpdate };
+                        }
+                    } else {
+                        state.consoleLog.push(`error: ${result.error}`, "compilation failed.");
+                        state.feedback = { type: 'error', message: result.error };
+                    }
+                } catch (e) {
+                    state.feedback = { type: 'error', message: "Error interno en el simulador." };
+                }
+                renderIDE();
+            }, 500);
+        }
+
+        function nextLevel() {
+            const levels = state.mode === 'general' ? generalLevels : pointerLevels;
+            if (state.progress[state.mode] < levels.length - 1) {
+                state.progress[state.mode]++;
+                saveState(); 
+                loadLevel();
+            } else {
+                state.feedback = { type: 'complete', message: "¡Increíble! Has completado todo el curso." };
+                renderIDE();
+            }
+        }
+
+        function goBack() {
+            state.mode = null;
+            state.feedback = null;
+            saveState(); 
+            renderMainMenu();
+        }
+        
+        function openResetModal() {
+            modalEl.classList.remove('hidden');
+        }
+        
+        function closeResetModal() {
+            modalEl.classList.add('hidden');
+        }
+        
+        function confirmReset() {
+            localStorage.removeItem('csimulator_progress');
+            state.mode = null;
+            state.progress = { general: 0, pointers: 0 };
+            state.code = "";
+            state.feedback = null;
+            closeResetModal();
+            renderMainMenu();
+        }
+
+        if (state.mode) {
+            loadLevel();
+        } else {
+            renderMainMenu();
+        }
+
+    </script>
+</body>
+</html>
