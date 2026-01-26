@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminalis Adeptus: Protocolo Génesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pip-color: #4af626;
+            --bg-color: #0d1117;
+            --panel-bg: rgba(13, 17, 23, 0.95);
+            --border-color: #15803d;
+            --danger-color: #ff3333;
+            --accent-color: #eab308;
+            --scanline-opacity: 0.1;
+            --crt-overlay-opacity: 0.2;
+            --corruption-color: #ff00ff;
+            --dir-color: #3b82f6;
+            --exe-color: #22c55e;
+        }
+
+        [data-theme="parchment"] {
+            --pip-color: #3e2723;
+            --bg-color: #f5f5dc;
+            --panel-bg: rgba(240, 240, 215, 0.95);
+            --border-color: #8d6e63;
+            --danger-color: #b71c1c;
+            --accent-color: #d84315;
+            --scanline-opacity: 0.05;
+            --crt-overlay-opacity: 0.05;
+            --corruption-color: #880e4f;
+            --dir-color: #1e40af;
+            --exe-color: #15803d;
+        }
+
+        [data-theme="grayscale"] {
+            --pip-color: #e0e0e0;
+            --bg-color: #121212;
+            --panel-bg: rgba(30, 30, 30, 0.95);
+            --border-color: #555555;
+            --danger-color: #ffffff;
+            --accent-color: #9e9e9e;
+            --scanline-opacity: 0.1;
+            --crt-overlay-opacity: 0.2;
+            --corruption-color: #ffffff;
+            --dir-color: #e0e0e0;
+            --exe-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Share Tech Mono', monospace;
+            background-color: var(--bg-color);
+            color: var(--pip-color);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            transition: background-color 0.5s, color 0.5s;
+        }
+
+        .theme-text { color: var(--pip-color); }
+        .theme-bg { background-color: var(--bg-color); }
+        .theme-panel-bg { background-color: var(--panel-bg); }
+        .theme-border { border-color: var(--border-color); }
+        .theme-danger { color: var(--danger-color); }
+        .theme-accent { color: var(--accent-color); }
+        .theme-fill { fill: var(--pip-color); }
+        .theme-stroke { stroke: var(--pip-color); }
+        .text-dir { color: var(--dir-color); font-weight: bold; }
+        .text-exe { color: var(--exe-color); font-weight: bold; }
+
+        .crt::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+            opacity: var(--crt-overlay-opacity);
+        }
+
+        .crt::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: 0.027906; }
+            5% { opacity: 0.048532; }
+            10% { opacity: 0.030339; }
+            15% { opacity: 0.057398; }
+            20% { opacity: 0.022421; }
+            25% { opacity: 0.053805; }
+            30% { opacity: 0.015701; }
+            35% { opacity: 0.063852; }
+            40% { opacity: 0.012297; }
+            45% { opacity: 0.058327; }
+            50% { opacity: 0.025624; }
+            55% { opacity: 0.057271; }
+            60% { opacity: 0.023253; }
+            65% { opacity: 0.047029; }
+            70% { opacity: 0.019565; }
+            75% { opacity: 0.052865; }
+            80% { opacity: 0.028946; }
+            85% { opacity: 0.053641; }
+            90% { opacity: 0.023769; }
+            95% { opacity: 0.060197; }
+            100% { opacity: 0.021028; }
+        }
+
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: var(--pip-color);
+            outline: none;
+            width: 100%;
+            caret-color: var(--pip-color);
+            text-shadow: 0 0 5px var(--pip-color);
+        }
+
+        .glow-text {
+            text-shadow: 0 0 5px var(--pip-color);
+        }
+
+        .danger-text {
+            color: var(--danger-color);
+            text-shadow: 0 0 5px var(--danger-color);
+        }
+
+        .scanline {
+            width: 100%;
+            height: 100px;
+            z-index: 10;
+            background: linear-gradient(0deg, rgba(0,0,0,0) 0%, var(--pip-color) 50%, rgba(0,0,0,0) 100%);
+            opacity: var(--scanline-opacity);
+            position: absolute;
+            bottom: 100%;
+            animation: scanline 10s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scanline {
+            0% { bottom: 100%; }
+            100% { bottom: -100px; }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color); 
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--pip-color); 
+        }
+
+        .typing-effect {
+            border-right: 2px solid var(--pip-color);
+            white-space: pre-wrap;
+            overflow: hidden;
+            animation: blink-caret 0.75s step-end infinite;
+        }
+
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: var(--pip-color); }
+        }
+
+        ::selection {
+            background: var(--pip-color);
+            color: var(--bg-color);
+        }
+        
+        select, input.code-input {
+            background-color: var(--bg-color);
+            color: var(--pip-color);
+            border: 1px solid var(--border-color);
+            font-family: 'Share Tech Mono', monospace;
+        }
+        
+        button.action-btn {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--pip-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.action-btn:hover {
+            background-color: var(--pip-color);
+            color: var(--bg-color);
+        }
+        button.action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: transparent;
+            color: var(--pip-color);
+        }
+
+        @keyframes pulse-border {
+            0% { border-color: var(--accent-color); }
+            50% { border-color: var(--pip-color); }
+            100% { border-color: var(--accent-color); }
+        }
+        .shop-btn {
+            animation: pulse-border 2s infinite;
+        }
+
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(2px);
+        }
+
+        .corruption-container {
+            width: 100%;
+            height: 10px;
+            background-color: #000;
+            border: 1px solid var(--danger-color);
+            margin-top: 5px;
+            position: relative;
+            overflow: hidden;
+        }
+        .corruption-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--danger-color), var(--corruption-color));
+            width: 0%;
+            transition: width 0.5s linear;
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+
+        .screen-glitch {
+            animation: shake 0.8s infinite; 
+            filter: hue-rotate(90deg) contrast(1.5);
+        }
+
+        .text-glitch {
+             text-shadow: 2px 0 var(--corruption-color), -2px 0 var(--danger-color);
+        }
+
+        @keyframes damage-flash {
+            0% { box-shadow: inset 0 0 0 0 rgba(255, 0, 0, 0); }
+            50% { box-shadow: inset 0 0 50px 20px rgba(255, 0, 0, 0.5); }
+            100% { box-shadow: inset 0 0 0 0 rgba(255, 0, 0, 0); }
+        }
+        .damage-effect {
+            animation: damage-flash 0.5s ease-out;
+        }
+        
+        .help-block {
+            background-color: rgba(0,0,0,0.3);
+            border-left: 2px solid var(--accent-color);
+            padding: 8px;
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+        .help-title {
+            color: var(--accent-color);
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .help-code {
+            font-family: 'VT323', monospace;
+            background: rgba(255,255,255,0.1);
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="crt flex flex-col h-screen p-2 md:p-6 theme-bg" data-theme="omnissiah" id="main-body">
+
+    <div class="scanline"></div>
+
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-end border-b-2 theme-border pb-2 mb-4 shrink-0 gap-4">
+        
+        <div class="flex flex-col gap-2 w-full md:w-auto order-2 md:order-1">
+            <div class="flex flex-wrap gap-2 items-center">
+                <select id="theme-selector" class="text-xs font-mono p-1 rounded outline-none hover:opacity-80 transition-opacity uppercase">
+                    <option value="omnissiah">Visual: Omnissiah</option>
+                    <option value="parchment">Visual: Pergamino</option>
+                    <option value="grayscale">Visual: Litografía</option>
+                </select>
+
+                <button id="stress-toggle-btn" class="action-btn text-xs p-1 px-2 rounded uppercase font-bold border theme-border">
+                    EFECTOS ESTRÉS: ON
+                </button>
+
+                <div class="flex items-center gap-1">
+                    <input type="text" id="level-code-input" placeholder="CÓDIGO SALTO" class="code-input text-xs p-1 w-24 uppercase rounded outline-none" maxlength="10">
+                    <button id="warp-btn" class="action-btn text-xs p-1 px-2 rounded uppercase font-bold">Warp</button>
+                </div>
+
+                <button id="reset-system-btn" class="action-btn text-xs p-1 px-2 rounded uppercase font-bold theme-danger border-red-800 hover:bg-red-900 ml-2" title="Reiniciar Protocolo">
+                    Reiniciar Sistema
+                </button>
+            </div>
+            
+            <div class="mt-1">
+                <h1 class="text-2xl md:text-4xl font-bold glow-text uppercase tracking-widest theme-text leading-none">Cogitator Omega-9</h1>
+                <p class="text-xs opacity-70 theme-text">TempleOS v40.006 // Usuario: Iniciado</p>
+            </div>
+        </div>
+
+        <div class="text-right w-full md:w-auto order-1 md:order-2 flex flex-row md:flex-col justify-between items-center md:items-end">
+             <div class="flex flex-col items-end">
+                <div id="date-display" class="text-xs opacity-70 font-mono theme-text hidden md:block"></div>
+                <div class="text-lg md:text-2xl font-bold danger-text animate-pulse" id="alert-status">ESTADO: PURGA REQUERIDA</div>
+            </div>
+            
+            <div class="border theme-border px-3 py-1 mt-2 flex items-center gap-2 rounded bg-opacity-20 theme-panel-bg">
+                <span class="text-xs uppercase opacity-70 theme-text">Créditos:</span>
+                <span id="credits-display" class="text-xl font-bold theme-accent font-mono">0</span>
+                <span class="text-xs theme-accent">Cr</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow grid grid-cols-1 md:grid-cols-3 gap-6 overflow-hidden min-h-0 relative">
+        
+        <div id="backlash-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center z-40 hidden">
+             <h1 class="text-6xl md:text-8xl font-black text-red-600 bg-black/80 px-4 py-2 border-4 border-red-600 tracking-tighter transform rotate-[-5deg] animate-pulse drop-shadow-[0_0_15px_rgba(255,0,0,0.8)]">
+                 DESCARGA PSÍQUICA
+             </h1>
+        </div>
+
+        <div class="md:col-span-1 flex flex-col gap-4 min-h-0 overflow-y-auto pr-2 border-r theme-border">
+            <div class="border theme-border p-4 flex flex-col items-center justify-between shrink-0 h-auto relative overflow-hidden" style="background-color: rgba(var(--pip-color), 0.1);">
+                <div class="absolute top-2 left-2 text-xs theme-text opacity-50 font-mono" id="level-code-display">CÓDIGO: ???</div>
+                <div class="absolute top-2 right-2 text-xs theme-text opacity-50 font-mono">SERVO-CRÁNEO: ACTIVO</div>
+                
+                <svg viewBox="0 0 100 100" class="w-24 h-24 animate-pulse theme-fill mt-4">
+                    <path d="M50 10 C30 10 15 25 15 45 C15 60 25 70 30 80 L35 90 L65 90 L70 80 C75 70 85 60 85 45 C85 25 70 10 50 10 Z M35 50 C32 50 30 48 30 45 C30 42 32 40 35 40 C38 40 40 42 40 45 C40 48 38 50 35 50 Z M65 50 C62 50 60 48 60 45 C60 42 62 40 65 40 C68 40 70 42 70 45 C70 48 68 50 65 50 Z M50 75 L45 65 L55 65 Z" />
+                    <path d="M15 45 C 5 45 5 80 20 95" fill="none" class="theme-stroke" stroke-width="2" />
+                    <path d="M85 45 C 95 45 95 80 80 95" fill="none" class="theme-stroke" stroke-width="2" />
+                </svg>
+
+                <div class="w-full mt-4 mb-2">
+                    <div class="flex justify-between text-xs font-bold uppercase mb-1">
+                        <span class="theme-danger">Nivel de Herejía</span>
+                        <span id="corruption-percent" class="theme-danger">0%</span>
+                    </div>
+                    <div class="corruption-container">
+                        <div id="corruption-bar" class="corruption-fill"></div>
+                    </div>
+                    <p class="text-[10px] opacity-70 mt-1 italic text-center theme-text">Completa comandos para purgar</p>
+                </div>
+
+                <div class="w-full flex flex-col gap-2 mt-2">
+                    <button id="buy-answer-btn" class="shop-btn w-full py-1 px-2 border theme-border theme-text text-sm uppercase font-bold hover:opacity-80 transition-all flex justify-between items-center group">
+                        <span>Solicitar Solución</span>
+                        <span class="theme-accent group-hover:text-white">150 Cr</span>
+                    </button>
+                    
+                    <button id="buy-purge-btn" class="shop-btn w-full py-1 px-2 border border-purple-500 theme-text text-sm uppercase font-bold hover:bg-purple-900/50 transition-all flex justify-between items-center group">
+                        <span>Ritual de Purificación</span>
+                        <span class="theme-accent group-hover:text-white">50 Cr</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-grow border theme-border theme-panel-bg p-4 overflow-y-auto">
+                <h2 class="text-xl font-bold border-b theme-border pb-2 mb-2 theme-text opacity-90">/// LOG DE MISIÓN</h2>
+                <div id="narrative-display" class="space-y-4 text-sm md:text-base leading-relaxed opacity-90 theme-text">
+                </div>
+                
+                <div id="help-section" class="mt-6 border-t theme-border pt-4">
+                    <h3 class="text-lg font-bold theme-accent mb-2">/// DATOS TÉCNICOS</h3>
+                    <div id="help-content" class="text-sm opacity-80 space-y-2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-2 theme-border p-4 shrink-0" style="background-color: rgba(100, 100, 100, 0.1);">
+                <h3 class="text-lg font-bold mb-1 uppercase theme-accent">Objetivo Prioritario</h3>
+                <p id="objective-text" class="text-sm theme-text">Inicializando...</p>
+            </div>
+        </div>
+
+        <div class="md:col-span-2 flex flex-col theme-panel-bg border-4 theme-border rounded-lg shadow-lg overflow-hidden relative">
+            
+            <div class="p-2 flex items-center gap-2 border-b theme-border bg-opacity-50" style="background-color: rgba(0,0,0,0.2);">
+                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="ml-2 text-xs font-mono opacity-60 theme-text">root@mars-citadel:~</span>
+            </div>
+
+            <div id="terminal-output" class="flex-grow p-4 font-mono text-sm md:text-base overflow-y-auto space-y-2 theme-text" style="font-family: 'VT323', monospace; font-size: 1.2rem;">
+                <div class="opacity-50">Iniciando protocolo de conexión...</div>
+                <div class="opacity-50">Conectado al Nodo Local.</div>
+                <div class="theme-accent mb-4">Bienvenido, Iniciado. El Omnissiah observa.</div>
+            </div>
+
+            <div class="p-4 border-t theme-border flex items-center gap-2 shrink-0" style="background-color: rgba(0,0,0,0.2);">
+                <span id="prompt-span" class="theme-text font-bold font-mono">root@mars:~$</span>
+                <input type="text" id="cli-input" class="terminal-input font-mono text-lg" autocomplete="off" spellcheck="false" autofocus>
+            </div>
+        </div>
+    </main>
+
+    <div id="success-overlay" class="fixed inset-0 z-50 hidden flex flex-col items-center justify-center text-center p-8 theme-panel-bg" style="background-color: var(--bg-color);">
+        <h2 class="text-6xl font-medieval mb-4 theme-text drop-shadow-md">RITO COMPLETADO</h2>
+        <p class="text-2xl theme-text mb-8 max-w-2xl opacity-80" id="success-message">El Espíritu Máquina está complacido.</p>
+        <div class="text-3xl theme-accent font-bold mb-8 animate-bounce">+50 CRÉDITOS</div>
+        <button id="next-level-btn" class="px-8 py-4 bg-transparent border-2 theme-border theme-text text-xl font-bold hover:opacity-80 transition-all uppercase tracking-widest cursor-pointer">
+            Siguiente Protocolo
+        </button>
+    </div>
+
+    <div id="solution-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-overlay p-4">
+        <div class="theme-panel-bg border-2 theme-border p-6 rounded-lg shadow-2xl max-w-md w-full text-center relative">
+            <h3 class="text-2xl font-bold theme-accent mb-4 uppercase">/// DATOS DESENCRIPTADOS ///</h3>
+            <p class="theme-text mb-4">El Espíritu Máquina ha revelado el siguiente rito:</p>
+            <div class="bg-black border theme-border p-4 mb-6 font-mono text-xl theme-text">
+                <span id="solution-text" class="animate-pulse"></span>
+            </div>
+            
+            <button id="close-solution-btn" class="px-6 py-2 border theme-border theme-text hover:bg-green-900/50 transition font-bold uppercase w-full">
+                Cerrar Conexión
+            </button>
+        </div>
+    </div>
+
+    <div id="reset-confirm-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center modal-overlay p-4">
+        <div class="theme-panel-bg border-2 border-red-500 p-6 rounded-lg shadow-2xl max-w-md w-full text-center relative">
+            <h3 class="text-2xl font-bold theme-danger mb-4 uppercase">/// ALERTA CRÍTICA ///</h3>
+            <p class="theme-text mb-6">¿Estás seguro de querer purgar la memoria del sistema? Todo el progreso no guardado en la Nube Sagrada se perderá y el protocolo se reiniciará al nivel 1.</p>
+            
+            <div class="flex justify-center gap-4">
+                <button id="cancel-reset-btn" class="px-4 py-2 border theme-border theme-text hover:opacity-70 transition font-bold uppercase">
+                    Cancelar
+                </button>
+                <button id="confirm-reset-btn" class="px-4 py-2 bg-red-900 border border-red-500 text-white hover:bg-red-700 transition font-bold uppercase animate-pulse">
+                    Confirmar Purga
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="welcome-modal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+        <div class="theme-panel-bg border-2 theme-border p-8 rounded-lg shadow-2xl max-w-2xl w-full text-center relative overflow-y-auto max-h-[90vh]">
+            <h2 class="text-3xl md:text-4xl font-bold theme-accent mb-6 uppercase tracking-widest">/// PROTOCOLO DE INICIACIÓN ///</h2>
+            
+            <div class="text-left space-y-4 theme-text text-sm md:text-base mb-8 font-mono">
+                <p>Saludos, Iniciado.</p>
+                <p>Este simulador ha sido forjado con dedicación y código sagrado por el <strong class="theme-accent">Magos Pascal</strong>, específicamente diseñado para los aspirantes del Grado de Ingeniería del Software. Su propósito es la introducción a los misterios arcanos de <strong class="theme-accent">Bash</strong> y <strong class="theme-accent">UNIX</strong>.</p>
+                
+                <div class="border-t border-b theme-border py-4 my-4">
+                    <h3 class="text-lg font-bold theme-danger mb-2 uppercase">Mecánicas y Lore</h3>
+                    <p class="mb-2">Te encuentras ante el Cogitator Omega-9. Tu misión es purgar la corrupción disforme mediante la ejecución precisa de ritos de comando. Escribe los comandos en la terminal para avanzar.</p>
+                    <ul class="list-disc list-inside opacity-90 space-y-1">
+                        <li>Cada éxito otorga <span class="theme-accent">Créditos Imperiales</span>.</li>
+                        <li>Los errores aumentan la <span class="theme-danger">Corrupción</span> y el estrés del sistema.</li>
+                        <li>Usa la tienda para obtener ayuda divina si te atascas.</li>
+                    </ul>
+                </div>
+
+                <div class="bg-black/30 p-4 border border-blue-500/50 rounded">
+                    <h3 class="text-lg font-bold text-blue-400 mb-2 uppercase flex items-center gap-2">
+                        <span>ℹ️</span> Recomendación Psico-Cognitiva
+                    </h3>
+                    <p class="mb-2 font-bold">Se recomienda encarecidamente tener un pergamino físico (papel y bolígrafo) a mano. Anota cada comando, su significado y su efecto.</p>
+                    <p class="text-xs opacity-80 italic">"La escritura manual refuerza los engramas neuronales a través de la codificación motora y el procesamiento profundo. Psicológicamente, el acto físico de escribir obliga al cerebro a sintetizar la información, asegurando que el conocimiento perdure en tu memoria biológica más allá de la sesión digital."</p>
+                </div>
+                
+                <p class="text-center text-xs opacity-50 mt-4">Créditos: Creado por Pascal. Gloria al Omnissiah.</p>
+            </div>
+            
+            <button id="start-game-btn" class="px-8 py-3 bg-transparent border-2 theme-border theme-text text-xl font-bold hover:bg-green-900/30 transition-all uppercase tracking-widest cursor-pointer w-full md:w-auto">
+                Comenzar Entrenamiento
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'terminalis_adeptus_save_v40_006';
+
+        let fileSystemRoot = {
+            type: 'dir',
+            perms: 'drwxr-xr-x',
+            owner: 'root',
+            content: {
+                'home': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {
+                    'adeptus': { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {
+                        'temple_entrance': { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {
+                            'altar_data.txt': { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 2048, content: "Datos del altar sagrado..." },
+                            'servo_skull_log.txt': { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 512, content: "Log servo: 010101...\n[ERROR] Falla en condensador de flujo.\nStatus: OK\n[ERROR] Herejía lógica detectada." },
+                            'heresy_detected.log': { type: 'file', perms: '-rw-r--r--', owner: 'unknown', size: 666, content: "CORRUPCIÓN DETECTADA\nINICIANDO SUBRUTINA DE INFECCIÓN...\nGLORIA AL CAOS.\n[FIN DEL ARCHIVO]" },
+                            '.hidden_relic': { type: 'file', perms: '-rw-------', owner: 'root', size: 128, content: "Clave sagrada: OMNISSIAH_KEY_X9" },
+                            'archives': { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {
+                                'ancient_schema.pdf': { type: 'file', perms: '-r--r--r--', owner: 'mechanicus', size: 50400, content: "[Datos binarios ilegibles]" },
+                                'prayer_v1.txt': { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 1024, content: "Oh Dios Máquina, bendice este cogitator." }
+                            }}
+                        }},
+                        'palabras.txt': { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 50, content: "cab\ncat\ncar\nab\nbat\nrab\n" }
+                    }}
+                }},
+                'bin': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {} }, 
+                'etc': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {
+                    'passwd': { type: 'file', perms: '-rw-r--r--', owner: 'root', size: 2048, content: "root:x:0:0:root:/root:/bin/bash\nadeptus:x:1000:1000:Adeptus Mechanicus:/home/adeptus:/bin/bash" },
+                    'shadow': { type: 'file', perms: '-r--------', owner: 'root', size: 1024, content: "[ENCRYPTED]" }
+                }},
+                'tmp': { type: 'dir', perms: 'drwxrwxrwt', owner: 'root', content: {} },
+                'usr': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {
+                    'bin': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {} },
+                    'lib': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {} }
+                }},
+                'var': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {
+                    'log': { type: 'dir', perms: 'drwxr-xr-x', owner: 'root', content: {} }
+                }}
+            }
+        };
+
+        const commonBins = ['bash', 'ls', 'pwd', 'rm', 'cp', 'grep', 'ps', 'kill', 'chmod', 'chown', 'tar', 'wget', 'apt', 'man', 'apropos', 'touch', 'mkdir', 'mv', 'cat', 'echo'];
+        commonBins.forEach(b => fileSystemRoot.content['bin'].content[b] = { type: 'file', perms: '-rwxr-xr-x', owner: 'root', size: 12345, content: "[ELF Binary]" });
+
+        let currentPathStr = '/home/adeptus/temple_entrance';
+        
+        let processes = [
+            { pid: 1, user: 'root', cmd: '/sbin/init' },
+            { pid: 420, user: 'adeptus', cmd: 'bash' },
+            { pid: 666, user: 'chaos', cmd: './warp_leech' }
+        ];
+
+        let currentLevelIndex = 0;
+        let playerCredits = 0;
+        let corruptionLevel = 0;
+        let gameActive = false;
+        let stressEnabled = true;
+        let backlashCooldown = 0; 
+
+        function resolvePath(pathStr) {
+            if (pathStr === '/') return { node: fileSystemRoot, parent: null, name: '' };
+            
+            let parts = pathStr.split('/').filter(p => p.length > 0);
+            let current = fileSystemRoot;
+            let parent = null;
+            let name = '';
+            
+            for (let i = 0; i < parts.length; i++) {
+                let part = parts[i];
+                if (current.type !== 'dir') return null; 
+                parent = current;
+                name = part;
+                current = current.content[part];
+                if (!current) return null; 
+            }
+            return { node: current, parent, name };
+        }
+
+        function getAbsolutePath(pathArg) {
+            if (pathArg.startsWith('/')) return pathArg;
+            
+            let parts = currentPathStr.split('/').filter(p => p.length > 0);
+            if (pathArg === '..') {
+                parts.pop();
+            } else if (pathArg === '.') {
+            } else {
+                let argParts = pathArg.split('/').filter(p => p.length > 0);
+                for (let p of argParts) {
+                    if (p === '..') parts.pop();
+                    else if (p === '.') continue;
+                    else parts.push(p);
+                }
+            }
+            
+            let res = '/' + parts.join('/');
+            if (res === '//') res = '/';
+            return res;
+        }
+
+        function getParentPath(pathStr) {
+            let parts = pathStr.split('/').filter(p => p.length > 0);
+            parts.pop();
+            let res = '/' + parts.join('/');
+            if (res === '') res = '/';
+            return res;
+        }
+
+        function getPermString(n) {
+            n = parseInt(n);
+            let s = "";
+            s += (n & 4) ? "r" : "-";
+            s += (n & 2) ? "w" : "-";
+            s += (n & 1) ? "x" : "-";
+            return s;
+        }
+
+        function executeSimulation(input) {
+            let parts = input.trim().split(/\s+/); 
+            if (input.includes('"') || input.includes("'")) {
+                const match = input.match(/([^\s"']+)|"([^"]*)"|'([^']*)'/g);
+                if (match) {
+                    parts = match.map(m => m.replace(/^['"]|['"]$/g, ''));
+                }
+            }
+            
+            const cmd = parts[0];
+            const args = parts.slice(1);
+
+            if (cmd === 'pwd') {
+                return { output: currentPathStr, error: false };
+            }
+            
+            if (cmd === 'cd') {
+                let target = args[0];
+                if (!target) return { output: '', error: false }; 
+                let absPath = getAbsolutePath(target);
+                let resolved = resolvePath(absPath);
+                
+                if (resolved && resolved.node.type === 'dir') {
+                    currentPathStr = absPath;
+                    return { output: '', error: false };
+                } else {
+                    return { output: `bash: cd: ${target}: No existe el archivo o el directorio`, error: true };
+                }
+            }
+
+            if (cmd === 'ls') {
+                let showHidden = false;
+                let showLong = false;
+                let targetPath = currentPathStr;
+                
+                let pathArgs = [];
+                args.forEach(arg => {
+                    if (arg.startsWith('-')) {
+                        if (arg.includes('a')) showHidden = true;
+                        if (arg.includes('l')) showLong = true;
+                    } else {
+                        pathArgs.push(arg);
+                    }
+                });
+                
+                if (pathArgs.length > 0) {
+                    targetPath = getAbsolutePath(pathArgs[0]);
+                }
+
+                let resolved = resolvePath(targetPath);
+                if (!resolved || resolved.node.type !== 'dir') {
+                    if (resolved && resolved.node.type === 'file') {
+                         return { output: pathArgs[0], error: false };
+                    }
+                    return { output: `ls: no se puede acceder a '${pathArgs[0] || targetPath}': No existe el archivo o el directorio`, error: true };
+                }
+
+                let entries = Object.keys(resolved.node.content);
+                if (!showHidden) entries = entries.filter(e => !e.startsWith('.'));
+                
+                entries.sort();
+
+                if (showLong) {
+                    let out = `total ${entries.length * 4}\n`;
+                    out += entries.map(name => {
+                        let node = resolved.node.content[name];
+                        let typeChar = node.type === 'dir' ? 'd' : '-';
+                        let size = node.size || 4096;
+                        let nameStr = name;
+                        if (node.type === 'dir') nameStr = `<span class="text-dir">${name}/</span>`;
+                        else if (node.perms.includes('x')) nameStr = `<span class="text-exe">${name}*</span>`;
+                        
+                        return `${typeChar}${node.perms.slice(1)} 1 ${node.owner} ${node.owner} ${String(size).padStart(5)} Jan 01 00:00 ${nameStr}`;
+                    }).join('\n');
+                    return { output: out, error: false };
+                } else {
+                    let out = entries.map(name => {
+                        let node = resolved.node.content[name];
+                        if (node.type === 'dir') return `<span class="text-dir">${name}</span>`;
+                        if (node.perms && node.perms.includes('x')) return `<span class="text-exe">${name}</span>`;
+                        return name;
+                    }).join('  ');
+                    return { output: out, error: false };
+                }
+            }
+
+            if (cmd === 'cat') {
+                if (!args[0]) return { output: '', error: false };
+                let absPath = getAbsolutePath(args[0]);
+                let resolved = resolvePath(absPath);
+                if (resolved && resolved.node.type === 'file') {
+                    return { output: resolved.node.content || '', error: false };
+                }
+                return { output: `cat: ${args[0]}: No existe el archivo o el directorio`, error: true };
+            }
+
+            if (cmd === 'touch') {
+                if (!args[0]) return { output: "touch: falta un operando de archivo", error: true };
+                let absPath = getAbsolutePath(args[0]);
+                let parentPath = getParentPath(absPath);
+                let filename = absPath.split('/').pop();
+                
+                let parentRes = resolvePath(parentPath);
+                if (parentRes && parentRes.node.type === 'dir') {
+                    if (parentRes.node.content[filename]) {
+                    } else {
+                        parentRes.node.content[filename] = { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 0, content: "" };
+                    }
+                    return { output: '', error: false };
+                }
+                return { output: `touch: no se puede tocar '${args[0]}': No existe el archivo o el directorio`, error: true };
+            }
+
+            if (cmd === 'mkdir') {
+                let pFlag = args.includes('-p');
+                let dirName = args.find(a => !a.startsWith('-'));
+                if (!dirName) return { output: "mkdir: falta un operando", error: true };
+                
+                if (pFlag) {
+                    let parts = dirName.split('/').filter(p => p.length > 0);
+                    let current = resolvePath(currentPathStr).node;
+                    for (let p of parts) {
+                        if (!current.content[p]) {
+                            current.content[p] = { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {} };
+                        }
+                        current = current.content[p];
+                    }
+                    return { output: '', error: false };
+                } else {
+                    let absPath = getAbsolutePath(dirName);
+                    let parentPath = getParentPath(absPath);
+                    let name = absPath.split('/').pop();
+                    let parentRes = resolvePath(parentPath);
+                    if (parentRes && parentRes.node.type === 'dir') {
+                        if (parentRes.node.content[name]) {
+                            return { output: `mkdir: no se puede crear el directorio '${dirName}': El archivo ya existe`, error: true };
+                        }
+                        parentRes.node.content[name] = { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {} };
+                        return { output: '', error: false };
+                    }
+                    return { output: `mkdir: no se puede crear el directorio '${dirName}': No existe el archivo o el directorio`, error: true };
+                }
+            }
+
+            if (cmd === 'rm') {
+                if (!args[0]) return { output: "rm: falta un operando", error: true };
+                let absPath = getAbsolutePath(args[0]);
+                let parentPath = getParentPath(absPath);
+                let name = absPath.split('/').pop();
+                let parentRes = resolvePath(parentPath);
+                
+                if (parentRes && parentRes.node.content[name]) {
+                    if (parentRes.node.content[name].type === 'dir' && !args.includes('-r')) {
+                        return { output: `rm: no se puede borrar '${args[0]}': Es un directorio`, error: true };
+                    }
+                    delete parentRes.node.content[name];
+                    return { output: '', error: false };
+                }
+                return { output: `rm: no se puede borrar '${args[0]}': No existe el archivo o el directorio`, error: true };
+            }
+
+            if (cmd === 'cp') {
+                if (args.length < 2) return { output: "cp: falta un operando", error: true };
+                let src = getAbsolutePath(args[0]);
+                let dest = getAbsolutePath(args[1]);
+                
+                let srcRes = resolvePath(src);
+                if (!srcRes) return { output: `cp: no se puede efectuar stat sobre '${args[0]}': No existe el archivo o el directorio`, error: true };
+                
+                let destParentPath = getParentPath(dest);
+                let destName = dest.split('/').pop();
+                let destParentRes = resolvePath(destParentPath);
+                
+                if (destParentRes && destParentRes.node.type === 'dir') {
+                    let clone = JSON.parse(JSON.stringify(srcRes.node));
+                    destParentRes.node.content[destName] = clone;
+                    return { output: '', error: false };
+                }
+                return { output: `cp: fallo al crear el archivo: No existe el archivo o el directorio`, error: true };
+            }
+
+            if (cmd === 'mv') {
+                if (args.length < 2) return { output: "mv: falta un operando", error: true };
+                let src = getAbsolutePath(args[0]);
+                let dest = getAbsolutePath(args[1]);
+                
+                let srcRes = resolvePath(src);
+                if (!srcRes) return { output: `mv: no se puede efectuar stat sobre '${args[0]}': No existe el archivo o el directorio`, error: true };
+                
+                let destParentPath = getParentPath(dest);
+                let destName = dest.split('/').pop();
+                let destParentRes = resolvePath(destParentPath);
+                
+                let destRes = resolvePath(dest);
+                if (destRes && destRes.node.type === 'dir') {
+                    destParentRes = destRes;
+                    destName = srcRes.name;
+                }
+
+                if (destParentRes && destParentRes.node.type === 'dir') {
+                    destParentRes.node.content[destName] = srcRes.node;
+                    delete srcRes.parent.content[srcRes.name];
+                    return { output: '', error: false };
+                }
+                return { output: `mv: fallo`, error: true };
+            }
+
+            if (cmd === 'echo') {
+                return { output: args.join(' '), error: false };
+            }
+
+            if (cmd === 'grep') {
+                let pattern = args[0];
+                let file = args[1];
+                if (!file) return { output: "grep: falta el nombre del archivo", error: true };
+                
+                let absPath = getAbsolutePath(file);
+                let resolved = resolvePath(absPath);
+                if (resolved && resolved.node.type === 'file') {
+                    let lines = resolved.node.content.split('\n');
+                    try {
+                        let re = new RegExp(pattern);
+                        let matches = lines.filter(l => re.test(l));
+                        return { output: matches.join('\n'), error: false };
+                    } catch(e) {
+                        return { output: `grep: invalid regex`, error: true };
+                    }
+                }
+                return { output: `grep: ${file}: No existe el archivo`, error: true };
+            }
+
+            if (cmd === 'ps') {
+                let out = "PID   USER     CMD\n";
+                out += processes.map(p => `${String(p.pid).padEnd(5)} ${p.user.padEnd(8)} ${p.cmd}`).join('\n');
+                return { output: out, error: false };
+            }
+
+            if (cmd === 'kill') {
+                let pid = parseInt(args[0]);
+                let idx = processes.findIndex(p => p.pid === pid);
+                if (idx !== -1) {
+                    let p = processes[idx];
+                    processes.splice(idx, 1);
+                    return { output: `[1]+  Terminado              ${p.cmd}`, error: false };
+                }
+                return { output: `bash: kill: (${pid}) - No existe el proceso`, error: true };
+            }
+
+            if (cmd === 'chmod') {
+                if (args.length < 2) return { output: "chmod: falta operando", error: true };
+                let mode = args[0];
+                let file = args[1];
+                let absPath = getAbsolutePath(file);
+                let resolved = resolvePath(absPath);
+                if (resolved) {
+                    if (/^[0-7]{3}$/.test(mode)) {
+                        let p = "-";
+                        p += getPermString(mode[0]); 
+                        p += getPermString(mode[1]); 
+                        p += getPermString(mode[2]); 
+                        resolved.node.perms = p;
+                        return { output: '', error: false };
+                    }
+                    else if (mode === '+x') {
+                        let p = resolved.node.perms.split('');
+                        p[3] = 'x'; p[6] = 'x'; p[9] = 'x';
+                        resolved.node.perms = p.join('');
+                        return { output: '', error: false };
+                    }
+                    else {
+                        return { output: `chmod: modo inválido: '${mode}'`, error: true };
+                    }
+                }
+                return { output: `chmod: no se puede acceder a '${file}': No existe el archivo`, error: true };
+            }
+
+            if (cmd === 'chown') {
+                if (args.length < 2) return { output: "chown: falta operando", error: true };
+                let newOwner = args[0];
+                let file = args[1];
+                let absPath = getAbsolutePath(file);
+                let resolved = resolvePath(absPath);
+                if (resolved) {
+                    resolved.node.owner = newOwner;
+                    return { output: '', error: false };
+                }
+                return { output: `chown: no se puede acceder a '${file}': No existe el archivo`, error: true };
+            }
+
+            if (cmd === 'wget') {
+                let url = args[0] || 'http://unknown';
+                let file = url.split('/').pop() || 'index.html';
+                let current = resolvePath(currentPathStr).node;
+                current.content[file] = { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 1024, content: "Downloaded content" };
+                
+                return { output: `--2024-05-20--  ${url}\nResolving...\nConnecting... connected.\nHTTP request sent, awaiting response... 200 OK\nLength: 1024 [application/octet-stream]\nSaving to: ‘${file}’\n\n100%[===================>] 1,024       --.-K/s   in 0s`, error: false };
+            }
+
+            if (cmd === 'apt' || (cmd === 'sudo' && args[0] === 'apt')) {
+                return { output: "Reading package lists... Done\nBuilding dependency tree... Done\nThe following NEW packages will be installed:\n  package\n0 upgraded, 1 newly installed, 0 to remove.\nUnpacking... Setting up...", error: false };
+            }
+            
+            if (cmd === 'sudo') {
+                let subArgs = args.join(' ');
+                return executeSimulation(subArgs);
+            }
+
+            if (cmd === 'man') {
+                return { output: `MANUAL DE ${args[0] ? args[0].toUpperCase() : 'COMMAND'}\n\nDescripción genérica del manual.\nUsa 'q' para salir.`, error: false };
+            }
+            
+            if (cmd === 'apropos') {
+                return { output: `${args[0] || 'keyword'}: comando relacionado (1)`, error: false };
+            }
+
+            if (cmd === 'tar') {
+                if (args.includes('-czf') || args.includes('-cf')) {
+                    let file = args[1]; 
+                    let current = resolvePath(currentPathStr).node;
+                    current.content[file] = { type: 'file', perms: '-rw-r--r--', owner: 'adeptus', size: 5000, content: "[TAR ARCHIVE]" };
+                    return { output: '', error: false };
+                }
+                return { output: 'tar: opción requerida', error: true };
+            }
+
+            return { output: `bash: ${cmd}: orden no encontrada`, error: true };
+        }
+
+        const levels = [
+            {
+                id: 1,
+                code: "NAV-01",
+                title: "Localización Espiritual (pwd)",
+                narrative: "Iniciado, la Noosfera es vasta y laberíntica. Antes de poder comulgar con el Espíritu Máquina, debemos anclar nuestra lógica en la realidad. Consulta al Cogitador tu ubicación precisa en el banco de memoria.",
+                objective: "Ejecuta `pwd` para ver tu directorio de trabajo.",
+                explanation: "<span class='help-title'>PWD</span>Muestra la ruta completa desde la raíz (/). Ejemplo: `/home/usuario`.",
+                solutionCmd: "pwd",
+                trigger: (cmd) => cmd.trim() === 'pwd',
+                successMsg: "Ubicación confirmada. Los sensores lógicos se estabilizan."
+            },
+            {
+                id: 2,
+                code: "NAV-02",
+                title: "Visión del Auspex (ls)",
+                narrative: "Tus implantes oculares registran oscuridad. Invoca el Rito de Visión para revelar los espíritus de datos que residen en este sector de memoria.",
+                objective: "Ejecuta `ls`.",
+                explanation: "<span class='help-title'>LS</span>Lista el contenido. Si no se dan argumentos, lista el directorio actual.",
+                solutionCmd: "ls",
+                trigger: (cmd) => cmd.trim() === 'ls',
+                successMsg: "Escaneo Auspex completado. Archivos detectados."
+            },
+            {
+                id: 3,
+                code: "NAV-03",
+                title: "Ojo del Omnissiah (ls -la)",
+                narrative: "El escáner básico es insuficiente. El código chatarra se oculta en las sombras. Ajusta tus sensores a la máxima sensibilidad para ver la verdad oculta.",
+                objective: "Ejecuta `ls -la` para ver todo.",
+                explanation: "<span class='help-title'>LS Opciones</span><br>`-l`: Formato largo (permisos, dueño, tamaño).<br>`-a`: Muestra ocultos (ej: `.config`).",
+                solutionCmd: "ls -la",
+                trigger: (cmd) => cmd.replace(/\s+/g, '') === 'ls-la' || cmd.replace(/\s+/g, '') === 'ls-al',
+                successMsg: "Revelación. La reliquia `.hidden_relic` ha sido expuesta."
+            },
+            {
+                id: 4,
+                code: "FILE-01",
+                title: "Inspección de Escrituras (cat)",
+                narrative: "El archivo `heresy_detected.log` apesta a corrupción de la disformidad. No lo ejecutes. Obsérvalo a través de la lente segura del Rito de Concatenación.",
+                objective: "Lee su contenido con `cat heresy_detected.log`.",
+                explanation: "<span class='help-title'>CAT</span>(Concatenate). Muestra todo el contenido de un archivo de texto de una vez.",
+                solutionCmd: "cat heresy_detected.log",
+                trigger: (cmd) => cmd.includes('cat') && cmd.includes('heresy_detected.log'),
+                successMsg: "Confirmado. El texto está maldito."
+            },
+            {
+                id: 5,
+                code: "FILE-02",
+                title: "Forja de Datos (touch)",
+                narrative: "Necesitamos un registro inmaculado para contrarrestar la mancha. Forja una nueva tabla de datos en el silicio.",
+                objective: "Crea un archivo vacío `sello.txt`.",
+                explanation: "<span class='help-title'>TOUCH</span>Crea un archivo vacío si no existe, o actualiza su fecha de modificación si ya existe.",
+                solutionCmd: "touch sello.txt",
+                trigger: (cmd) => cmd === 'touch sello.txt',
+                successMsg: "Tabla forjada. El silicio canta."
+            },
+            {
+                id: 6,
+                code: "NAV-04",
+                title: "Peregrinación Relativa (cd)",
+                narrative: "Adéntrate en el Sanctum de Archivos. Mueve tu consciencia digital a través de las puertas lógicas.",
+                objective: "Entra en la carpeta `archives`.",
+                explanation: "<span class='help-title'>CD</span>(Change Directory). Cambia tu ubicación. `cd carpeta` entra en una subcarpeta.",
+                solutionCmd: "cd archives",
+                trigger: (cmd) => {
+                    if(cmd === 'cd archives') {
+                        currentPathStr += '/archives'; 
+                        return true;
+                    } return false;
+                },
+                successMsg: "Has cruzado el umbral."
+            },
+            {
+                id: 7,
+                code: "NAV-05",
+                title: "Retorno a la Superficie (cd ..)",
+                narrative: "La atmósfera aquí es pesada. Regresa al nivel superior antes de que la presión de datos sature tus núcleos.",
+                objective: "Usa `cd ..` para subir un nivel.",
+                explanation: "<span class='help-title'>Ruta Relativa</span>`..` significa 'arriba'. `.` significa 'aquí'.",
+                solutionCmd: "cd ..",
+                trigger: (cmd) => {
+                    if(cmd === 'cd ..') {
+                        currentPathStr = currentPathStr.substring(0, currentPathStr.lastIndexOf('/'));
+                        return true;
+                    } return false;
+                },
+                successMsg: "Estabilizando presión lógica."
+            },
+            {
+                id: 8,
+                code: "NAV-06",
+                title: "Salto de Disformidad (Absoluto)",
+                narrative: "Realiza un salto calculado directamente al núcleo de configuración `/etc`. Ignora el espacio intermedio.",
+                objective: "Usa la ruta absoluta: `cd /etc`.",
+                explanation: "<span class='help-title'>Ruta Absoluta</span>Empieza desde la raíz `/`. No importa dónde estés, siempre lleva al mismo sitio.",
+                solutionCmd: "cd /etc",
+                trigger: (cmd) => {
+                    if(cmd === 'cd /etc') {
+                        currentPathStr = '/etc';
+                        return true;
+                    } return false;
+                },
+                successMsg: "Salto completado sin incidentes."
+            },
+            {
+                id: 9,
+                code: "NAV-07",
+                title: "Regreso a la Base",
+                narrative: "Vuelve a tu puesto de operación en el templo. La misión continúa.",
+                objective: "Ejecuta `cd /home/adeptus/temple_entrance`.",
+                explanation: "<span class='help-title'>Estructura</span>Linux es un árbol invertido que empieza en `/`.",
+                solutionCmd: "cd /home/adeptus/temple_entrance",
+                trigger: (cmd) => {
+                    if(cmd.includes('/home/adeptus/temple_entrance')) {
+                        currentPathStr = '/home/adeptus/temple_entrance';
+                        return true;
+                    } return false;
+                },
+                successMsg: "Sistemas reconectados en la base."
+            },
+            {
+                id: 10,
+                code: "DIR-01",
+                title: "Arquitectura Sagrada (mkdir -p)",
+                narrative: "Debemos expandir el templo de datos. Construye una nueva ala de almacenamiento con una subestructura compleja.",
+                objective: "Crea el árbol de carpetas de una vez: `mkdir -p sector/subsector`.",
+                explanation: "<span class='help-title'>MKDIR -P</span>Permite crear `carpeta/subcarpeta` de golpe. Sin `-p`, daría error si `carpeta` no existe.",
+                solutionCmd: "mkdir -p sector/subsector",
+                trigger: (cmd) => cmd === 'mkdir -p sector/subsector',
+                successMsg: "Nueva arquitectura consagrada."
+            },
+            {
+                id: 11,
+                code: "MAN-01",
+                title: "Consulta del Lexicanum (man)",
+                narrative: "La ignorancia es herejía. Antes de manipular los datos sagrados, consulta el Lexicanum Imperial.",
+                objective: "Ejecuta `man cp`.",
+                explanation: "<span class='help-title'>MAN</span>Abre la documentación. Usa flechas para leer y `q` para salir (simulado aquí).",
+                solutionCmd: "man cp",
+                trigger: (cmd) => cmd === 'man cp',
+                successMsg: "El conocimiento es poder."
+            },
+            {
+                id: 12,
+                code: "MAN-02",
+                title: "Búsqueda en los Archivos (apropos)",
+                narrative: "Tu memoria falla, Tech-Adept. Busca en el índice del Lexicanum el rito para 'mover' datos.",
+                objective: "Ejecuta `apropos move`.",
+                explanation: "<span class='help-title'>APROPOS</span>Útil cuando sabes qué quieres hacer pero no recuerdas el comando.",
+                solutionCmd: "apropos move",
+                trigger: (cmd) => cmd === 'apropos move',
+                successMsg: "Comando 'mv' identificado en los archivos."
+            },
+            {
+                id: 13,
+                code: "FILE-03",
+                title: "Rito de Duplicación (cp)",
+                narrative: "La reliquia `.hidden_relic` es frágil. Crea un clon sagrado antes de que la corrupción la alcance.",
+                objective: "Ejecuta `cp .hidden_relic relic_backup`.",
+                explanation: "<span class='help-title'>CP</span>(Copy). Duplica archivos. Mantiene el original.",
+                solutionCmd: "cp .hidden_relic relic_backup",
+                trigger: (cmd) => cmd === 'cp .hidden_relic relic_backup',
+                successMsg: "Clon estable. El espíritu máquina aprueba."
+            },
+            {
+                id: 14,
+                code: "FILE-04",
+                title: "Rito de Desplazamiento (mv)",
+                narrative: "El log hereje contamina este sector. Múeve la corrupción al `sector` de aislamiento.",
+                objective: "Ejecuta `mv heresy_detected.log sector/`.",
+                explanation: "<span class='help-title'>MV</span>(Move). Mueve archivos. Si el destino es un nombre de archivo en la misma carpeta, lo renombra.",
+                solutionCmd: "mv heresy_detected.log sector/",
+                trigger: (cmd) => cmd.startsWith('mv heresy') && cmd.includes('sector'),
+                successMsg: "Contaminación contenida."
+            },
+            {
+                id: 15,
+                code: "PROC-01",
+                title: "Visión Espectral (ps)",
+                narrative: "Los augurios indican un espíritu maligno consumiendo ciclos de CPU. Identifica la abominación.",
+                objective: "Lista los procesos con `ps aux`.",
+                explanation: "<span class='help-title'>PS AUX</span>Muestra todos los procesos de todos los usuarios. PID = Process ID.",
+                solutionCmd: "ps aux",
+                trigger: (cmd) => cmd === 'ps aux',
+                successMsg: "Abominación 'warp_leech' (PID 666) detectada."
+            },
+            {
+                id: 16,
+                code: "PROC-02",
+                title: "Exorcismo Digital (kill)",
+                narrative: "No muestres piedad. Termina el proceso demoníaco y devuélvelo a la nada.",
+                objective: "Ejecuta `kill 666`.",
+                explanation: "<span class='help-title'>KILL</span>Envía una señal de terminación al proceso indicado por su PID.",
+                solutionCmd: "kill 666",
+                trigger: (cmd) => cmd.includes('kill') && cmd.includes('666'),
+                successMsg: "Demonio purgado. El sistema respira."
+            },
+            {
+                id: 17,
+                code: "MATH-01",
+                title: "Cálculo Sagrado (Aritmética)",
+                narrative: "El Cogitator requiere una ofrenda numérica para recalibrar sus giroscopios. Calcula la suma sagrada de 5 y 3.",
+                objective: "Escribe `echo $((5 + 3))`.",
+                explanation: "<span class='help-title'>Aritmética</span>Bash puede sumar, restar, etc. usando `$((expresion))`.",
+                solutionCmd: "echo $((5 + 3))",
+                trigger: (cmd) => cmd.includes('5') && cmd.includes('3') && cmd.includes('+'),
+                successMsg: "Resultado: 8. Giroscopios alineados."
+            },
+            {
+                id: 18,
+                code: "MATH-02",
+                title: "Manipulación de Bits",
+                narrative: "Optimiza el flujo de datos. Desplaza los bits de 5 a la izquierda una vez para duplicar su potencia sagrada.",
+                objective: "Escribe `echo $((5 << 1))`.",
+                explanation: "<span class='help-title'>Bitwise</span>Operaciones a nivel de bit. Útil en programación de bajo nivel.",
+                solutionCmd: "echo $((5 << 1))",
+                trigger: (cmd) => cmd.includes('5') && cmd.includes('1') && cmd.includes('<<'),
+                successMsg: "Resultado: 10. Bits alineados para máxima eficiencia."
+            },
+            {
+                id: 19,
+                code: "REDIR-01",
+                title: "Escritura de Pergaminos (Stdout >)",
+                narrative: "El conocimiento oral se pierde. Graba la lista de archivos en un pergamino digital.",
+                objective: "Ejecuta `ls > lista.txt`.",
+                explanation: "<span class='help-title'>Redirección ></span>Captura lo que saldría por pantalla y lo mete en un archivo. Si existe, lo borra y crea nuevo.",
+                solutionCmd: "ls > lista.txt",
+                trigger: (cmd) => cmd.replace(/\s+/g, '') === 'ls>lista.txt',
+                successMsg: "Pergamino 'lista.txt' inscrito."
+            },
+            {
+                id: 20,
+                code: "REDIR-02",
+                title: "Anexo de Datos (Stdout >>)",
+                narrative: "No borres el trabajo anterior. Añade una liturgia final al pergamino `lista.txt`.",
+                objective: "Ejecuta `echo 'Fin' >> lista.txt`.",
+                explanation: "<span class='help-title'>Redirección >></span>Agrega contenido al final del archivo sin borrar lo que había antes.",
+                solutionCmd: "echo 'Fin' >> lista.txt",
+                trigger: (cmd) => cmd.includes('>>') && cmd.includes('lista.txt'),
+                successMsg: "Liturgia anexada."
+            },
+            {
+                id: 21,
+                code: "REDIR-03",
+                title: "Captura de Errores (2>)",
+                narrative: "Los fallos del sistema son lecciones. Provoca un error y captura su esencia en un log.",
+                objective: "Ejecuta `ls /vacio 2> error.log`.",
+                explanation: "<span class='help-title'>Stderr 2></span>Los errores van por un canal distinto (2). Con esto los capturas en un archivo.",
+                solutionCmd: "ls /vacio 2> error.log",
+                trigger: (cmd) => cmd.includes('2>') && cmd.includes('error.log'),
+                successMsg: "Fallo capturado y contenido."
+            },
+            {
+                id: 22,
+                code: "REDIR-04",
+                title: "Fusión de Flujos (2>&1)",
+                narrative: "El Omnissiah ve todo como uno. Une el flujo de verdad y el flujo de error en un solo canal.",
+                objective: "Ejecuta `ls /etc /vacio > todo.log 2>&1`.",
+                explanation: "<span class='help-title'>2>&1</span>Redirige el error a la salida estándar. Útil para logs completos.",
+                solutionCmd: "ls /etc /vacio > todo.log 2>&1",
+                trigger: (cmd) => cmd.includes('> todo.log') && cmd.includes('2>&1'),
+                successMsg: "Flujos unificados en la corriente de datos."
+            },
+            {
+                id: 23,
+                code: "PIPE-01",
+                title: "Tuberías Sagradas (|)",
+                narrative: "Conecta los ritos. Filtra la salida del escáner en tiempo real para encontrar solo lo que buscamos.",
+                objective: "Ejecuta `ls | grep txt`.",
+                explanation: "<span class='help-title'>Pipe |</span>Conecta programas. La salida de uno es la entrada del siguiente.",
+                solutionCmd: "ls | grep txt",
+                trigger: (cmd) => cmd.replace(/\s+/g, '') === 'ls|greptxt',
+                successMsg: "Datos filtrados. Pureza alcanzada."
+            },
+            {
+                id: 24,
+                code: "REGEX-01",
+                title: "Comodín del Caos (.)",
+                narrative: "En `palabras.txt`, la corrupción altera las letras. Busca patrones con 'a', cualquier carácter corrupto, y 'b'.",
+                objective: "Ejecuta `grep 'a.b' palabras.txt`.",
+                explanation: "<span class='help-title'>Regex .</span>El punto es un comodín para un solo carácter. `a.b` encaja con `acb`, `a9b`, etc.",
+                solutionCmd: "grep 'a.b' palabras.txt",
+                trigger: (cmd) => cmd.includes('grep') && cmd.includes('a.b'),
+                successMsg: "Patrones anómalos identificados: 'rab', 'cab'."
+            },
+            {
+                id: 25,
+                code: "REGEX-02",
+                title: "Repetición Infinita (*)",
+                narrative: "El eco de la disformidad repite señales. Busca palabras que empiecen por 'a' seguidas de cualquier cantidad de 'b'.",
+                objective: "Ejecuta `grep 'ab*' palabras.txt`.",
+                explanation: "<span class='help-title'>Regex *</span>Repite el elemento anterior 0 o más veces. `ab*` encaja con `a`, `ab`, `abb`.",
+                solutionCmd: "grep 'ab*' palabras.txt",
+                trigger: (cmd) => cmd.includes('grep') && cmd.includes('ab*'),
+                successMsg: "Ecos localizados."
+            },
+            {
+                id: 26,
+                code: "REGEX-03",
+                title: "Principio de Todo (^)",
+                narrative: "Busca el origen. Filtra palabras que COMIENCEN por 'c'.",
+                objective: "Ejecuta `grep '^c' palabras.txt`.",
+                explanation: "<span class='help-title'>Regex ^</span>Indica el principio de la línea. `^c` solo busca líneas que empiezan por c.",
+                solutionCmd: "grep '^c' palabras.txt",
+                trigger: (cmd) => cmd.includes('grep') && cmd.includes('^c'),
+                successMsg: "Origen trazado: 'cat', 'cab'."
+            },
+            {
+                id: 27,
+                code: "REGEX-04",
+                title: "El Fin de los Tiempos ($)",
+                narrative: "Todo tiene un final. Busca palabras que TERMINEN en 't'.",
+                objective: "Ejecuta `grep 't$' palabras.txt`.",
+                explanation: "<span class='help-title'>Regex $</span>Indica el final de la línea. `t$` busca líneas que acaban en t.",
+                solutionCmd: "grep 't$' palabras.txt",
+                trigger: (cmd) => cmd.includes('grep') && cmd.includes('t$'),
+                successMsg: "Finales confirmados: 'cat', 'bat'."
+            },
+            {
+                id: 28,
+                code: "REGEX-05",
+                title: "La Verdad Exacta",
+                narrative: "No aceptes imitaciones. Busca exactamente la línea que solo contenga 'ab', nada más y nada menos.",
+                objective: "Ejecuta `grep '^ab$' palabras.txt`.",
+                explanation: "<span class='help-title'>^...$</span>Fuerza a que toda la línea coincida exactamente con el patrón.",
+                solutionCmd: "grep '^ab$' palabras.txt",
+                trigger: (cmd) => cmd.includes('grep') && cmd.includes('^ab$'),
+                successMsg: "Verdad absoluta encontrada."
+            },
+            {
+                id: 29,
+                code: "PERM-01",
+                title: "Rito de Activación (chmod +x)",
+                narrative: "El script `ritual.sh` yace inerte. Infúndele el espíritu de la máquina para que pueda actuar.",
+                objective: "Ejecuta `chmod +x ritual.sh`.",
+                explanation: "<span class='help-title'>CHMOD Simbólico</span>`+x` añade permiso de ejecución. `-x` lo quita. `u+x` solo para el dueño.",
+                solutionCmd: "chmod +x ritual.sh",
+                trigger: (cmd) => cmd === 'chmod +x ritual.sh',
+                successMsg: "El script despierta."
+            },
+            {
+                id: 30,
+                code: "PERM-02",
+                title: "Bloqueo Octal (chmod 000)",
+                narrative: "El ritual es inestable y peligroso. Debemos sellarlo completamente para que nadie pueda leerlo ni ejecutarlo. Usa la notación sagrada octal.",
+                objective: "Ejecuta `chmod 000 ritual.sh`.",
+                explanation: "<span class='help-title'>CHMOD Octal</span>0=--- (nada). 000 quita todos los permisos a dueño, grupo y otros.",
+                solutionCmd: "chmod 000 ritual.sh",
+                trigger: (cmd) => cmd === 'chmod 000 ritual.sh',
+                successMsg: "Archivo sellado herméticamente."
+            },
+            {
+                id: 31,
+                code: "PERM-03",
+                title: "Acceso Preciso (chmod 600)",
+                narrative: "El Magos Dominus requiere acceso exclusivo para inspeccionar el código. Restaura lectura y escritura solo para el dueño.",
+                objective: "Ejecuta `chmod 600 ritual.sh`.",
+                explanation: "<span class='help-title'>CHMOD 600</span>6 (4+2) es Lectura(4) + Escritura(2). 600 da rw- al dueño y --- al resto.",
+                solutionCmd: "chmod 600 ritual.sh",
+                trigger: (cmd) => cmd === 'chmod 600 ritual.sh',
+                successMsg: "Permisos ajustados con precisión."
+            },
+            {
+                id: 32,
+                code: "OWN-01",
+                title: "Consagración de Propiedad (chown)",
+                narrative: "Este ritual es demasiado poderoso para un iniciado. Transfiere su propiedad al Alto Magos (root).",
+                objective: "Ejecuta `chown root ritual.sh`.",
+                explanation: "<span class='help-title'>CHOWN</span>Change Owner. Cambia quién es el dueño del archivo.",
+                solutionCmd: "chown root ritual.sh",
+                trigger: (cmd) => cmd === 'chown root ritual.sh',
+                successMsg: "Propiedad transferida a la jerarquía superior."
+            },
+            {
+                id: 33,
+                code: "SUDO-01",
+                title: "Poder del Omnissiah (sudo)",
+                narrative: "Invoca los privilegios de administrador para actualizar los códices del sistema.",
+                objective: "Ejecuta `sudo apt update`.",
+                explanation: "<span class='help-title'>SUDO</span>SuperUser DO. Ejecuta el comando siguiente con privilegios máximos.",
+                solutionCmd: "sudo apt update",
+                trigger: (cmd) => cmd === 'sudo apt update',
+                successMsg: "Códices sincronizados con Marte."
+            },
+            {
+                id: 34,
+                code: "APT-01",
+                title: "Requisición de STC (apt)",
+                narrative: "Instala la herramienta `neofetch` desde los repositorios sagrados.",
+                objective: "Ejecuta `sudo apt install neofetch`.",
+                explanation: "<span class='help-title'>APT</span>Gestor de paquetes avanzado. Es la 'tienda de aplicaciones' de Debian/Ubuntu.",
+                solutionCmd: "sudo apt install neofetch",
+                trigger: (cmd) => cmd.includes('apt') && cmd.includes('install') && cmd.includes('neofetch'),
+                successMsg: "Herramienta STC instalada."
+            },
+            {
+                id: 35,
+                code: "WEB-01",
+                title: "Extracción de la Noosfera (wget)",
+                narrative: "Descarga los planos perdidos desde la red planetaria.",
+                objective: "Ejecuta `wget http://mars.net/code.zip`.",
+                explanation: "<span class='help-title'>WGET</span>Herramienta para descargar contenidos de servidores web.",
+                solutionCmd: "wget http://mars.net/code.zip",
+                trigger: (cmd) => cmd.startsWith('wget'),
+                successMsg: "Transmisión recibida al 100%."
+            },
+            {
+                id: 36,
+                code: "ARCH-01",
+                title: "Compresión Hermética (tar)",
+                narrative: "Sella los archivos sagrados en un contenedor comprimido para su transporte.",
+                objective: "Ejecuta `tar -czf backup.tar.gz archives`.",
+                explanation: "<span class='help-title'>TAR</span>Tape Archive. Empaqueta muchos archivos en uno solo (y lo comprime con z).",
+                solutionCmd: "tar -czf backup.tar.gz archives",
+                trigger: (cmd) => cmd.startsWith('tar') && cmd.includes('backup.tar.gz'),
+                successMsg: "Contenedor sellado y bendecido."
+            },
+            {
+                id: 37,
+                code: "SCRIPT-01",
+                title: "El Shebang Sagrado",
+                narrative: "Inicia la creación de un autómata de software. La primera línea debe invocar al intérprete correcto.",
+                objective: "Escribe `echo '#!/bin/bash' > script.sh`.",
+                explanation: "<span class='help-title'>Shebang #!</span>La línea `#!/bin/bash` dice al sistema: 'Usa Bash para ejecutar este archivo'.",
+                solutionCmd: "echo '#!/bin/bash' > script.sh",
+                trigger: (cmd) => (cmd.includes('#!/bin/bash') && cmd.includes('>')),
+                successMsg: "Autómata inicializado."
+            },
+            {
+                id: 38,
+                code: "ECHO-02",
+                title: "La Voz de la Máquina",
+                narrative: "Instruye al autómata para que hable. Añade el saludo sagrado.",
+                objective: "Ejecuta `echo 'echo \"Hola Mundo\"' >> script.sh`.",
+                explanation: "<span class='help-title'>Echo en Script</span>Estamos escribiendo un comando dentro de un archivo para que se ejecute luego.",
+                solutionCmd: "echo 'echo \"Hola Mundo\"' >> script.sh",
+                trigger: (cmd) => cmd.includes('echo') && cmd.includes('>>') && cmd.includes('script.sh'),
+                successMsg: "Voz implantada en el código."
+            },
+            {
+                id: 39,
+                code: "EXEC-01",
+                title: "El Despertar",
+                narrative: "El ritual está completo. Ejecuta tu creación y observa cómo cobra vida.",
+                objective: "Ejecuta `./script.sh`.",
+                explanation: "<span class='help-title'>./script</span>Para ejecutar un script en la carpeta actual, debes poner `./` delante por seguridad.",
+                solutionCmd: "./script.sh",
+                trigger: (cmd) => cmd === './script.sh' || cmd === 'bash script.sh',
+                successMsg: "Salida: Hola Mundo. ¡Entrenamiento Completado, Magos!"
+            }
+        ];
+
+        const terminalOutput = document.getElementById('terminal-output');
+        const cliInput = document.getElementById('cli-input');
+        const narrativeDisplay = document.getElementById('narrative-display');
+        const objectiveText = document.getElementById('objective-text');
+        const successOverlay = document.getElementById('success-overlay');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const dateDisplay = document.getElementById('date-display');
+        const successMessageEl = document.getElementById('success-message');
+        const themeSelector = document.getElementById('theme-selector');
+        const creditsDisplay = document.getElementById('credits-display');
+        const buyAnswerBtn = document.getElementById('buy-answer-btn');
+        const levelCodeInput = document.getElementById('level-code-input');
+        const warpBtn = document.getElementById('warp-btn');
+        const levelCodeDisplay = document.getElementById('level-code-display');
+        const stressToggleBtn = document.getElementById('stress-toggle-btn');
+        const backlashOverlay = document.getElementById('backlash-overlay');
+        const helpContent = document.getElementById('help-content');
+        
+        const corruptionBar = document.getElementById('corruption-bar');
+        const corruptionPercent = document.getElementById('corruption-percent');
+        const buyPurgeBtn = document.getElementById('buy-purge-btn');
+        const mainBody = document.getElementById('main-body');
+        
+        const resetSystemBtn = document.getElementById('reset-system-btn');
+        const resetConfirmModal = document.getElementById('reset-confirm-modal');
+        const cancelResetBtn = document.getElementById('cancel-reset-btn');
+        const confirmResetBtn = document.getElementById('confirm-reset-btn');
+
+        const solutionModal = document.getElementById('solution-modal');
+        const solutionText = document.getElementById('solution-text');
+        const closeSolutionBtn = document.getElementById('close-solution-btn');
+
+        const welcomeModal = document.getElementById('welcome-modal');
+        const startGameBtn = document.getElementById('start-game-btn');
+
+        function saveGame() {
+            const state = {
+                level: currentLevelIndex,
+                credits: playerCredits,
+                theme: themeSelector.value,
+                stress: stressEnabled
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if(saved) {
+                try {
+                    const state = JSON.parse(saved);
+                    currentLevelIndex = state.level || 0;
+                    playerCredits = state.credits || 0;
+                    if(state.theme) {
+                        themeSelector.value = state.theme;
+                        document.body.setAttribute('data-theme', state.theme);
+                    }
+                    if(state.stress !== undefined) {
+                        stressEnabled = state.stress;
+                        updateStressUI();
+                    }
+                    if(currentLevelIndex >= 9) currentPathStr = '/home/adeptus/temple_entrance';
+                } catch(e) {
+                    console.error("Error cargando memoria del Cogitator:", e);
+                }
+            }
+        }
+        
+        function restoreFileSystemState(levelIndex) {
+            if (levelIndex >= 5) {
+                let temple = fileSystemRoot.content['home'].content['adeptus'].content['temple_entrance'];
+                if (!temple.content['cuarentena']) {
+                    temple.content['cuarentena'] = { type: 'dir', perms: 'drwxr-xr-x', owner: 'adeptus', content: {} };
+                }
+            }
+            
+            if (levelIndex >= 6) {
+                let temple = fileSystemRoot.content['home'].content['adeptus'].content['temple_entrance'];
+                let quarantine = temple.content['cuarentena'];
+                if (temple.content['heresy_detected.log'] && quarantine) {
+                    quarantine.content['heresy_detected.log'] = temple.content['heresy_detected.log'];
+                    delete temple.content['heresy_detected.log'];
+                } else if (quarantine && !quarantine.content['heresy_detected.log'] && levelIndex < 8) {
+                     quarantine.content['heresy_detected.log'] = { type: 'file', perms: '-rw-r--r--', owner: 'unknown', size: 666, content: "CORRUPCIÓN DETECTADA..." };
+                }
+            }
+            
+            if (levelIndex >= 8) {
+                let temple = fileSystemRoot.content['home'].content['adeptus'].content['temple_entrance'];
+                if (temple.content['cuarentena'] && temple.content['cuarentena'].content['heresy_detected.log']) {
+                    delete temple.content['cuarentena'].content['heresy_detected.log'];
+                }
+            }
+        }
+
+        function hardReset() {
+            localStorage.removeItem(STORAGE_KEY);
+            location.reload();
+        }
+
+        function initGame() {
+            loadGame(); 
+            
+            updateDate();
+            setInterval(updateDate, 1000);
+            
+            setInterval(corruptionLoop, 1000);
+            
+            loadLevel(currentLevelIndex);
+            updateCreditsUI();
+            
+            welcomeModal.classList.remove('hidden');
+            gameActive = false;
+
+            startGameBtn.addEventListener('click', () => {
+                welcomeModal.classList.add('hidden');
+                gameActive = true;
+                cliInput.focus();
+            });
+            
+            themeSelector.addEventListener('change', (e) => {
+                document.body.setAttribute('data-theme', e.target.value);
+                saveGame();
+            });
+
+            stressToggleBtn.addEventListener('click', () => {
+                stressEnabled = !stressEnabled;
+                updateStressUI();
+                saveGame();
+            });
+
+            cliInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    processCommand(this.value);
+                    this.value = '';
+                }
+            });
+
+            nextLevelBtn.addEventListener('click', () => {
+                successOverlay.classList.add('hidden');
+                currentLevelIndex++;
+                corruptionLevel = 0; 
+                updateCorruptionUI();
+                saveGame(); 
+                if (currentLevelIndex < levels.length) {
+                    loadLevel(currentLevelIndex);
+                } else {
+                    showVictory();
+                }
+            });
+            
+            buyAnswerBtn.addEventListener('click', buyAnswer);
+            buyPurgeBtn.addEventListener('click', buyPurge);
+            
+            closeSolutionBtn.addEventListener('click', () => {
+                solutionModal.classList.add('hidden');
+                gameActive = true; 
+                cliInput.focus();
+            });
+            
+            warpBtn.addEventListener('click', attemptWarp);
+            levelCodeInput.addEventListener('keydown', (e) => {
+                 if (e.key === 'Enter') attemptWarp();
+            });
+            
+            resetSystemBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.remove('hidden');
+                gameActive = false; 
+            });
+            
+            cancelResetBtn.addEventListener('click', () => {
+                resetConfirmModal.classList.add('hidden');
+                gameActive = true; 
+            });
+            
+            confirmResetBtn.addEventListener('click', () => {
+                hardReset();
+            });
+
+            document.addEventListener('click', (e) => {
+                const ignore = [themeSelector, stressToggleBtn, levelCodeInput, buyAnswerBtn, buyPurgeBtn, warpBtn, resetSystemBtn, cancelResetBtn, confirmResetBtn, closeSolutionBtn, startGameBtn];
+                if (!ignore.includes(e.target) && !resetConfirmModal.contains(e.target) && !solutionModal.contains(e.target) && !welcomeModal.contains(e.target)) {
+                    cliInput.focus();
+                }
+            });
+        }
+
+        function updateStressUI() {
+            if(stressEnabled) {
+                stressToggleBtn.innerText = "EFECTOS ESTRÉS: ON";
+                stressToggleBtn.classList.remove('opacity-50');
+            } else {
+                stressToggleBtn.innerText = "EFECTOS ESTRÉS: OFF";
+                stressToggleBtn.classList.add('opacity-50');
+                mainBody.classList.remove('screen-glitch');
+                terminalOutput.classList.remove('text-glitch');
+            }
+        }
+        
+        function corruptionLoop() {
+            if(!gameActive) return;
+            
+            const growthRate = 0.5 + (currentLevelIndex * 0.05);
+            
+            if(corruptionLevel < 100) {
+                corruptionLevel += growthRate;
+                if(corruptionLevel > 100) corruptionLevel = 100;
+                updateCorruptionUI();
+                
+                if(corruptionLevel < 100 && !backlashOverlay.classList.contains('hidden')) {
+                     backlashOverlay.classList.add('hidden');
+                }
+
+            } else {
+                backlashCooldown++;
+                if(backlashCooldown >= 2) { 
+                     triggerPsychicBacklash();
+                     backlashCooldown = 0;
+                }
+            }
+        }
+        
+        function updateCorruptionUI() {
+            const width = Math.min(100, Math.max(0, corruptionLevel));
+            corruptionBar.style.width = `${width}%`;
+            corruptionPercent.innerText = `${Math.floor(width)}%`;
+            
+            if(width > 70 && stressEnabled) {
+                mainBody.classList.add('screen-glitch');
+                terminalOutput.classList.add('text-glitch');
+            } else {
+                mainBody.classList.remove('screen-glitch');
+                terminalOutput.classList.remove('text-glitch');
+            }
+        }
+        
+        function triggerPsychicBacklash() {
+            updatePoints(-10); 
+            mainBody.classList.add('damage-effect');
+            setTimeout(() => mainBody.classList.remove('damage-effect'), 500);
+            
+            backlashOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                if(corruptionLevel < 100) backlashOverlay.classList.add('hidden');
+            }, 1500); 
+            
+            addToTerminal("/// ALERTA CRÍTICA: DESCARGA PSÍQUICA DETECTADA. ///", "theme-danger");
+        }
+
+        function buyPurge() {
+            if(playerCredits >= 50) {
+                updatePoints(-50);
+                corruptionLevel = Math.max(0, corruptionLevel - 50); 
+                updateCorruptionUI();
+                backlashOverlay.classList.add('hidden'); 
+                addToTerminal("/// RITO DE PURIFICACIÓN COMPLETADO. ESTABILIDAD RESTAURADA. ///", "theme-accent");
+            } else {
+                addToTerminal("/// CRÉDITOS INSUFICIENTES PARA EL RITO ///", "theme-danger");
+            }
+            cliInput.focus();
+        }
+
+        function updateCreditsUI() {
+            creditsDisplay.innerText = playerCredits;
+            
+            if(playerCredits >= 150) {
+                buyAnswerBtn.removeAttribute('disabled');
+                buyAnswerBtn.classList.remove('opacity-50');
+            } else {
+                buyAnswerBtn.setAttribute('disabled', 'true');
+                buyAnswerBtn.classList.add('opacity-50');
+            }
+            
+            if(playerCredits >= 50) {
+                buyPurgeBtn.removeAttribute('disabled');
+                buyPurgeBtn.classList.remove('opacity-50');
+            } else {
+                buyPurgeBtn.setAttribute('disabled', 'true');
+                buyPurgeBtn.classList.add('opacity-50');
+            }
+        }
+        
+        function updatePoints(amount) {
+            playerCredits += amount;
+            if (playerCredits < 0) playerCredits = 0; 
+            
+            saveGame(); 
+            
+            const span = document.createElement('span');
+            span.innerText = amount > 0 ? `+${amount}` : `${amount}`;
+            span.className = `fixed top-16 right-10 text-2xl font-bold ${amount > 0 ? 'text-green-400' : 'text-red-500'} transition-opacity duration-1000 pointer-events-none z-50`;
+            document.body.appendChild(span);
+            setTimeout(() => {
+                span.style.opacity = '0';
+                setTimeout(() => span.remove(), 1000);
+            }, 100);
+            
+            updateCreditsUI();
+        }
+
+        function buyAnswer() {
+            if(playerCredits >= 150) {
+                const level = levels[currentLevelIndex];
+                if(confirm(`¿Confirmas la requisición de datos por 150 Créditos?`)) {
+                    updatePoints(-150);
+                    
+                    solutionText.innerText = level.solutionCmd;
+                    solutionModal.classList.remove('hidden');
+                    gameActive = false; 
+                    
+                    addToTerminal(`/// SOLICITUD APROBADA. DATOS VISUALIZADOS. ///`, 'theme-accent');
+                }
+            } else {
+                addToTerminal(`/// CRÉDITOS INSUFICIENTES ///`, 'theme-danger');
+            }
+        }
+        
+        function attemptWarp() {
+            const code = levelCodeInput.value.trim().toUpperCase();
+            if(!code) return;
+            
+            const levelIndex = levels.findIndex(l => l.code === code);
+            if(levelIndex !== -1) {
+                addToTerminal(`/// INICIANDO SALTO WARP HACIA ${code}... ///`, 'theme-accent');
+                
+                if(levelIndex < 6) {
+                    currentPathStr = '/home/adeptus/temple_entrance';
+                }
+                
+                currentLevelIndex = levelIndex;
+                corruptionLevel = 0; 
+                updateCorruptionUI();
+                saveGame(); 
+                
+                setTimeout(() => {
+                    loadLevel(currentLevelIndex);
+                    levelCodeInput.value = '';
+                }, 1000);
+            } else {
+                addToTerminal(`/// ERROR DE NAVEGACIÓN: COORDENADAS ${code} INVÁLIDAS ///`, 'theme-danger');
+            }
+            cliInput.focus();
+        }
+
+        function updateDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const millennium = Math.floor(year / 1000) + 1;
+            const fraction = Math.floor(((now - new Date(year, 0, 0)) / (new Date(year + 1, 0, 0) - new Date(year, 0, 0))) * 1000);
+            dateDisplay.innerText = `FECHA IMPERIAL: 0.${fraction.toString().padStart(3,'0')}.${year}.M${millennium}`;
+        }
+
+        function loadLevel(index) {
+            gameActive = true; 
+            const level = levels[index];
+            levelCodeDisplay.innerText = `CÓDIGO: ${level.code}`;
+            
+            narrativeDisplay.innerHTML = '';
+            const p = document.createElement('p');
+            p.className = 'typing-effect mb-4';
+            p.innerText = level.narrative;
+            narrativeDisplay.appendChild(p);
+            
+            objectiveText.innerText = level.objective;
+            objectiveText.classList.add('animate-pulse');
+            setTimeout(() => objectiveText.classList.remove('animate-pulse'), 1000);
+
+            helpContent.innerHTML = level.explanation;
+
+            addToTerminal(`--- PROTOCOLO ${index + 1} (${level.code}) INICIADO ---`, 'opacity-60');
+            
+            let displayPath = currentPathStr;
+            if(displayPath.startsWith('/home/adeptus')) {
+                displayPath = displayPath.replace('/home/adeptus', '~');
+            }
+            document.getElementById('prompt-span').innerText = `root@mars:${displayPath}$`;
+        }
+
+        function addToTerminal(text, className = '') {
+            const div = document.createElement('div');
+            div.className = className;
+            div.innerHTML = text.replace(/\n/g, '<br>'); 
+            terminalOutput.appendChild(div);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        function processCommand(input) {
+            const promptSpan = document.getElementById('prompt-span');
+            const prompt = promptSpan.innerText;
+            addToTerminal(`${prompt} ${input}`);
+            
+            if(input.trim() === '1412') {
+                addToTerminal(`/// CÓDIGO DE ADMINISTRADOR ACEPTADO. RECURSOS AÑADIDOS. ///`, 'theme-accent');
+                updatePoints(500);
+                return;
+            }
+
+            const simResult = executeSimulation(input);
+            if(simResult.output) {
+                addToTerminal(simResult.output, simResult.error ? 'theme-danger' : '');
+            }
+
+            const level = levels[currentLevelIndex];
+            
+            if (level.trigger(input.trim())) {
+                updatePoints(50); 
+                corruptionLevel = Math.max(0, corruptionLevel - 20); 
+                updateCorruptionUI();
+                
+                gameActive = false; 
+                setTimeout(() => {
+                    triggerSuccess(level.successMsg);
+                }, 800);
+            } else if (simResult.error) {
+                updatePoints(-5); 
+                corruptionLevel = Math.min(100, corruptionLevel + 10); 
+                updateCorruptionUI();
+            } else {
+            }
+            
+            let nextDisplayPath = currentPathStr;
+            if(nextDisplayPath.startsWith('/home/adeptus')) {
+                nextDisplayPath = nextDisplayPath.replace('/home/adeptus', '~');
+            }
+            document.getElementById('prompt-span').innerText = `root@mars:${nextDisplayPath}$`;
+        }
+
+        function triggerSuccess(msg) {
+            successMessageEl.innerText = msg;
+            successOverlay.classList.remove('hidden');
+        }
+
+        function showVictory() {
+            document.body.innerHTML = `
+                <div class="h-screen flex flex-col items-center justify-center text-center theme-bg theme-text p-8 font-mono">
+                    <h1 class="text-6xl font-bold mb-4 theme-accent">MAESTRÍA ALCANZADA</h1>
+                    <p class="text-2xl mb-8">Has dominado los 39 ritos del sistema UNIX.</p>
+                    <p class="text-xl mb-4 text-green-400">PUNTUACIÓN FINAL: ${playerCredits} CRÉDITOS</p>
+                    <p class="max-w-xl text-lg opacity-80 mb-8">
+                        "No hay verdad en la carne, solo traición. No hay fuerza en la carne, solo debilidad. No hay constancia en la carne, solo decadencia. Solo hay certeza en el acero."
+                    </p>
+                    <button onclick="localStorage.removeItem('${STORAGE_KEY}'); location.reload()" class="border-2 theme-border px-6 py-3 hover:opacity-80 transition font-bold cursor-pointer">REINICIAR SIMULACIÓN</button>
+                </div>
+            `;
+             const theme = themeSelector.value;
+             document.body.setAttribute('data-theme', theme);
+        }
+
+        initGame();
+
+    </script>
+</body>
+</html>
