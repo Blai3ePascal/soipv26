@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Breach: Simulator v4.2</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+        }
+    }
+    </script>
+    
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e1e1e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; border-radius: 5px; border: 2px solid #1e1e1e; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #666; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .animate-slideIn { animation: slideIn 0.2s ease-out; }
+
+        .light-scrollbar::-webkit-scrollbar-track { background: #f3f4f6; }
+        .light-scrollbar::-webkit-scrollbar-thumb { background: #9ca3af; border: 2px solid #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+            Terminal, Database, Shield, Eye, Play, ChevronRight, Lock, 
+            Server, Cpu, Layers, BookOpen, AlertTriangle, FileText, 
+            CheckCircle, HelpCircle, X, Search, List, RefreshCw 
+        } from 'lucide-react';
+
+        const GLOSSARY = {
+          "PCB": "Process Control Block. Es la 'ficha médica' de un programa. El Kernel lo usa para saber qué está haciendo cada proceso, cuánta memoria usa y quién es su dueño.",
+          "PID": "Process ID. Como el DNI de un programa. Es un número único. El PID 1 siempre es 'init', el padre de todos.",
+          "UID": "User ID. Identifica al usuario que lanzó el programa. UID 1000 eres tú (usuario normal). UID 0 es el Dios del sistema (Root).",
+          "ROOT": "El administrador supremo. En Linux tiene el UID 0. Puede leer, borrar y modificar cualquier archivo o proceso.",
+          "K_PROCESS": "La tabla interna donde el Kernel guarda los PCBs. Si la controlas, controlas la ejecución del sistema.",
+          "K_INODE": "Tabla de i-nodos. Aquí el sistema de archivos guarda los permisos y dueños de los archivos, pero curiosamente, NO sus nombres.",
+          "K_MUTEX": "Tabla de 'candados'. Controla qué proceso tiene permiso exclusivo para usar un recurso (como la impresora o un trozo de memoria).",
+          "K_PAGE_TABLE": "El mapa del tesoro de la memoria RAM. Traduce las direcciones falsas (virtuales) que ven los programas a las reales (físicas) en el chip.",
+          "I-NODO": "Estructura de datos que representa un archivo. Dice 'quién' puede tocarlo y 'dónde' está en el disco.",
+          "MUTEX": "Mutual Exclusion. Imagina un baño con una sola llave. El Mutex es la llave. Evita que dos procesos entren a la vez.",
+          "DEADLOCK": "El abrazo mortal. El proceso A espera a B, y B espera a A. Ninguno avanza nunca. El sistema se congela.",
+          "PAGINACION": "Técnica que divide la memoria RAM en trocitos fijos (páginas) para organizarla mejor, como las hojas de un cuaderno.",
+          "DIRECCION VIRTUAL": "La dirección de memoria que el programa 'cree' tener. Es una ilusión creada por el Kernel.",
+          "DIRECCION FISICA": "La celda eléctrica real en el chip de memoria RAM donde se guardan los datos.",
+          "SQL": "Lenguaje estándar para hablar con bases de datos. Se parece al inglés: 'SELECT nombre FROM usuarios'.",
+          "SELECT": "La orden para pedir datos. Es como decir 'Muéstrame'.",
+          "WHERE": "El filtro. Es como decir 'Donde se cumpla esta condición'.",
+          "UNION": "Pegamento SQL. Toma el resultado de dos búsquedas distintas y las pone una debajo de otra en una sola lista.",
+          "COMENTARIO": "Texto que el ordenador ignora. En SQL se usa '--'. Los hackers lo usan para 'apagar' partes del código de seguridad.",
+          "BASH": "La pantalla negra de comandos clásica de Linux. Es un programa como cualquier otro.",
+          "INIT": "El primer programa que arranca al encender el ordenador. Si init muere, el sistema se apaga (Kernel Panic).",
+          "PERMS": "Permisos. r (leer), w (escribir), x (ejecutar). Definen qué se puede hacer con un archivo.",
+          "OWNER": "El dueño de un archivo o proceso. Solo él o Root pueden cambiar sus permisos.",
+          "TAUTOLOGIA": "Una verdad absoluta en lógica, como 'A es igual a A'. Se usa para romper filtros de seguridad.",
+          "IPC": "Inter-Process Communication. Formas que tienen los programas de pasarse notas entre ellos (tuberías, señales, sockets).",
+          "BLIND SQLI": "Inyección a ciegas. Como jugar a las 20 preguntas. La base de datos no te da la respuesta, solo te dice 'Sí' o 'No' a tus preguntas.",
+          "WILDCARD": "Comodín (%). En una búsqueda, significa 'cualquier cosa'. Como el '*' en los archivos.",
+          "LIKE": "Operador para buscar parecidos. 'Nombre LIKE J%' buscaría Juan, Jorge, Julia...",
+          "UPDATE": "Comando para cambiar datos. 'UPDATE usuarios SET edad=20'. Muy peligroso en manos equivocadas.",
+          "DELETE": "Comando para borrar filas. En el Kernel, esto equivaldría a matar procesos.",
+          "DROP": "El botón nuclear. Borra la estructura completa de la tabla. Datos irrecuperables.",
+          "SYSCALL": "Llamada al Sistema. Cuando un programa necesita algo importante (leer disco, internet), se lo pide al Kernel con una syscall.",
+          "SWAP": "Memoria de emergencia en el disco duro. Se usa cuando se acaba la RAM. Es lenta.",
+          "KERNEL PANIC": "El Kernel se rinde. Ha ocurrido un error tan grave que no puede seguir funcionando y reinicia la máquina."
+        };
+
+        const InteractiveText = ({ text, onTermClick }) => {
+            if (!text) return null;
+            const terms = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
+            const regex = new RegExp(`\\b(${terms.join('|')})\\b`, 'gi');
+            const parts = text.split(regex);
+            return (
+                <span className="leading-relaxed whitespace-pre-line block">
+                {parts.map((part, i) => {
+                    const upperPart = part.toUpperCase();
+                    if (GLOSSARY[upperPart]) {
+                    return (
+                        <button
+                        key={i}
+                        onClick={() => onTermClick(upperPart)}
+                        className="text-blue-400 hover:text-blue-300 font-bold underline decoration-dotted decoration-blue-500/50 hover:decoration-solid mx-1 cursor-pointer transition-colors"
+                        title="Ver definición"
+                        >
+                        {part}
+                        </button>
+                    );
+                    }
+                    return <span key={i}>{part}</span>;
+                })}
+                </span>
+            );
+        };
+
+        const INITIAL_DB = {
+          k_process: [
+            { pid: 1, name: 'init', uid: 0, state: 'RUNNING', priority: 0 },
+            { pid: 102, name: 'bash', uid: 1000, state: 'SLEEPING', priority: 20 },
+            { pid: 105, name: 'postgres', uid: 1000, state: 'RUNNING', priority: 20 },
+            { pid: 666, name: 'root_kit', uid: 0, state: 'HIDDEN', priority: -19 },
+            { pid: 777, name: 'student_proc', uid: 1000, state: 'RUNNING', priority: 10 }
+          ],
+          k_inode: [
+            { inode_id: 4001, type: 'FILE', perms: 'rw-r--r--', owner: 1000, content: 'user_notes.txt' },
+            { inode_id: 4002, type: 'DIR', perms: 'rwxr-xr-x', owner: 0, content: '/etc' },
+            { inode_id: 4003, type: 'FILE', perms: 'rw-------', owner: 0, content: 'shadow_passwords' }
+          ],
+          k_mutex: [
+            { mutex_id: 'MTX_01', resource: 'printer_spool', held_by: 105, status: 'LOCKED' },
+            { mutex_id: 'MTX_02', resource: 'kernel_memory', held_by: 666, status: 'LOCKED' }
+          ],
+          k_page_table: [
+            { virt_addr: '0x00A0', phys_addr: '0xF001', dirty: 0, present: 1 },
+            { virt_addr: '0x00B0', phys_addr: '0xF002', dirty: 1, present: 1 },
+            { virt_addr: '0xDEAD', phys_addr: '0xBEEF', dirty: 0, present: 1 }
+          ]
+        };
+
+        const LEVELS = [
+          {
+            id: 1,
+            title: "El PCB y la Consulta Básica",
+            concept: "Estructuras de Datos (Process Control Block)",
+            theory: `Bienvenido al Kernel. Imagina que el Sistema Operativo es una gran empresa. Cada empleado trabajando es un Proceso. Para no perder el control, el jefe (el Kernel) tiene una ficha detallada de cada empleado: el PCB (Process Control Block).
+
+        En esta ficha se guarda:
+        1.  PID: Su número de identificación único.
+        2.  UID: Quién lo contrató (el usuario).
+        3.  Estado: Si está trabajando, durmiendo o esperando.
+
+        Estas fichas están guardadas en una tabla llamada 'k_process'.
+        Para leer estas fichas, usamos el lenguaje SQL. Es como pedirle cosas a un bibliotecario.
+
+        La orden básica es SELECT (Seleccionar).
+        Sintaxis: 'SELECT * FROM nombre_tabla WHERE columna = valor'
+        * '*': Significa "todas las columnas".
+        * 'FROM': Indica de qué tabla sacar los datos.
+        * 'WHERE': Es el filtro. Solo queremos la fila que cumpla esto.`,
+            mission: "Tu objetivo es obtener la ficha técnica completa del primer proceso del sistema, llamado 'init', cuyo PID es siempre 1.",
+            hint: "SELECT * FROM k_process WHERE pid = 1",
+            explanation: "¡Exacto! Has recuperado el PCB del proceso padre. Sin este proceso, el sistema no podría existir. Has usado una consulta SQL válida para filtrar por una clave primaria (el PID).",
+            validate: (res, input) => input.toLowerCase().includes('pid') && input.includes('1')
+          },
+          {
+            id: 2,
+            title: "El Planificador y la Verdad Absoluta",
+            concept: "Scheduling y Lógica Booleana",
+            theory: `El Planificador (Scheduler) es el portero de discoteca del sistema operativo. Decide qué procesos pasan a la CPU y cuáles se quedan fuera esperando. Para hacerlo, usa filtros estrictos (ej: "Solo procesos del usuario 1000").
+
+        En informática, los filtros usan lógica: ¿Es esto verdad O es aquello verdad?
+        Aquí entra la TAUTOLOGIA. Una tautología es algo que SIEMPRE es verdad, pase lo que pase. Por ejemplo: "Hoy llueve O no llueve". Eso siempre es cierto.
+
+        En SQL, si añadimos 'OR 1=1' a una condición, estamos diciendo: "Muéstrame los datos si el usuario es Juan... O SI 1 ES IGUAL A 1".
+        Como 1 siempre es igual a 1, la condición se cumple para TODAS las filas. El portero se confunde y deja pasar a todo el mundo.`,
+            mission: "Engaña al filtro del planificador. Escribe una consulta que incluya una condición OR que siempre sea verdadera para forzar al sistema a mostrarte TODOS los procesos, no solo uno.",
+            hint: "SELECT * FROM k_process WHERE pid = 1 OR 1=1",
+            explanation: "¡Hackeado! Al inyectar 'OR 1=1', has anulado cualquier filtro de seguridad. La base de datos ha evaluado cada fila, y como la segunda condición siempre era cierta, te ha devuelto la tabla entera.",
+            validate: (res, input) => input.toLowerCase().includes('or') && (input.includes('1=1') || input.toLowerCase().includes('true'))
+          },
+          {
+            id: 3,
+            title: "Cadenas de Texto y Comentarios",
+            concept: "Tipos de Datos y Sanitización",
+            theory: `No todos los datos son números. El nombre de un proceso ("bash", "chrome") es texto. En programación llamamos al texto String (cadena).
+        En SQL, las cadenas siempre viven dentro de comillas simples: 'texto'.
+
+        Imagina que el sistema escribe la consulta por ti así:
+        'SELECT * FROM tabla WHERE nombre = 'TU_TEXTO_AQUI' AND estado = 'ACTIVO''
+
+        Si tú escribes 'bash' --', la consulta real se convierte en:
+        '... WHERE nombre = 'bash' --' AND estado ...'
+
+        1.  La primera comilla cierra el nombre.
+        2.  Los dos guiones '--' son un COMENTARIO. Le dicen al ordenador: "Ignora todo lo que venga después de esto".
+        Así consigues borrar el filtro de "estado ACTIVO" que el sistema quería imponer.`,
+            mission: "Busca el proceso con nombre 'bash'. Usa la técnica del comentario para que el sistema ignore cualquier filtro posterior y te lo muestre aunque esté dormido (SLEEPING).",
+            hint: "SELECT * FROM k_process WHERE name = 'bash' --",
+            explanation: "Bien jugado. Has cerrado la cadena de texto manual y has 'comentado' el resto de la consulta. El sistema de seguridad que comprobaba el estado nunca llegó a ejecutarse.",
+            validate: (res, input) => input.toLowerCase().includes('bash') && input.includes('--')
+          },
+          {
+            id: 4,
+            title: "El Sistema de Archivos Virtual (VFS)",
+            concept: "Unión de Estructuras (UNION)",
+            theory: `Hasta ahora solo hemos mirado la tabla de procesos. Pero un Sistema Operativo también maneja archivos. La información de los archivos (quién es el dueño, permisos, tamaño) se guarda en estructuras llamadas I-NODOS.
+        Estos viven en otra tabla: 'k_inode'.
+
+        ¿Cómo leemos una tabla diferente si el sistema solo nos deja preguntar por procesos?
+        Usamos el comando UNION.
+        'UNION' es como pegamento. Toma el resultado de una búsqueda (procesos) y le pega debajo el resultado de otra (i-nodos).
+
+        Regla de Oro: Para que el pegamento funcione, ambas tablas deben tener el mismo número de columnas. Si 'k_process' tiene 5 columnas, debes pedir 5 cosas a 'k_inode'. Si te faltan datos, puedes inventártelos poniendo números (1, 2, 3...) como relleno.`,
+            mission: "Usa el operador UNION para fusionar la lista de procesos con la lista completa de i-nodos. Recuerda rellenar las columnas que te falten.",
+            hint: "SELECT * FROM k_process WHERE pid=1 UNION SELECT 1,2,3,4,5 FROM k_inode",
+            explanation: "¡Fusión exitosa! Ahora ves filas extrañas en tu listado. No son procesos, son archivos disfrazados. Has logrado saltar de un subsistema (Gestión de Procesos) a otro (Sistema de Archivos).",
+            validate: (res, input) => input.toLowerCase().includes('union') && input.toLowerCase().includes('k_inode')
+          },
+          {
+            id: 5,
+            title: "Robo de Contraseñas (/etc/shadow)",
+            concept: "Extracción de Datos Sensibles",
+            theory: `Ya sabemos usar UNION. Ahora vamos a robar datos reales.
+        En Linux, el archivo más secreto es '/etc/shadow'. Contiene las contraseñas de los usuarios. Normalmente solo el usuario ROOT puede leerlo.
+
+        En nuestra tabla simulada 'k_inode', tenemos dos columnas interesantes:
+        1.  'inode_id': El identificador del archivo.
+        2.  'content': El contenido o nombre del archivo.
+
+        Vamos a usar UNION otra vez. Pero en lugar de poner números de relleno (1, 2...), vamos a pedir explícitamente esas columnas.
+        Queremos que, en el hueco donde iban los nombres de los procesos, aparezcan los nombres de los archivos.`,
+            mission: "Construye una UNION que extraiga las columnas 'inode_id' y 'content' de la tabla 'k_inode'. Rellena el resto de columnas con ceros.",
+            hint: "SELECT * FROM k_process WHERE pid=1 UNION SELECT inode_id, content, 0, 0, 0 FROM k_inode",
+            explanation: "Ahí está. Has localizado 'shadow_passwords'. Acabas de acceder a la lista de contraseñas del sistema aprovechando que el Kernel te dejó leer la memoria de los i-nodos sin verificar tus permisos.",
+            validate: (res, input) => input.toLowerCase().includes('union') && input.toLowerCase().includes('content')
+          },
+          {
+            id: 6,
+            title: "Bloqueos y Carrera de Recursos",
+            concept: "Sincronización (Mutex y Deadlocks)",
+            theory: `Un sistema operativo hace muchas cosas a la vez (Multitarea). ¿Qué pasa si dos procesos intentan imprimir a la vez? Las hojas saldrían mezcladas.
+        Para evitarlo, existen los MUTEX (Exclusión Mutua). Son como el pestillo de un baño. Si está cerrado (LOCKED), nadie más entra.
+
+        La tabla 'k_mutex' guarda estos pestillos.
+        Saber qué proceso tiene qué pestillo es vital. Un hacker podría provocar un DEADLOCK: hacer que dos procesos se esperen mutuamente para siempre, congelando el sistema.
+        Necesitamos espiar la tabla 'k_mutex' para ver quién tiene bloqueada la memoria.`,
+            mission: "Usa UNION para espiar la tabla 'k_mutex'. Queremos ver las columnas 'mutex_id', 'resource' y 'held_by' (quién lo tiene).",
+            hint: "SELECT * FROM k_process WHERE pid=1 UNION SELECT mutex_id, resource, held_by, status, 0 FROM k_mutex",
+            explanation: "Información crítica obtenida. Ves que el proceso 666 tiene bloqueada la 'kernel_memory'. Esto es muy sospechoso. Un proceso normal no debería retener ese recurso mucho tiempo.",
+            validate: (res, input) => input.toLowerCase().includes('union') && input.toLowerCase().includes('k_mutex')
+          },
+          {
+            id: 7,
+            title: "El Mapa de la Memoria (MMU)",
+            concept: "Memoria Virtual y Paginación",
+            theory: `Este es el nivel más profundo. Los programas no saben dónde están realmente en la RAM. Viven en Matrix.
+        Usan Direcciones Virtuales (imaginarias). El Kernel usa una tabla llamada 'k_page_table' para traducir esas direcciones a Direcciones Físicas (reales) en el chip de silicio.
+
+        Esto se llama PAGINACION.
+        Si un atacante conoce la dirección física real (phys_addr) de un dato, puede usar ataques de hardware (como Rowhammer) para cambiar bits en la memoria física vecina, saltándose toda la seguridad del software.
+        Vamos a robar el mapa de la memoria.`,
+            mission: "Accede a la tabla 'k_page_table' y extrae el mapeo de 'virt_addr' a 'phys_addr'.",
+            hint: "SELECT * FROM k_process WHERE pid=1 UNION SELECT virt_addr, phys_addr, 0, 0, 0 FROM k_page_table",
+            explanation: "Has roto la barrera de Matrix. Ahora sabes que la dirección virtual 0xDEAD corresponde a la física 0xBEEF. Con esto podrías inyectar código directamente en el hardware.",
+            validate: (res, input) => input.toLowerCase().includes('union') && input.toLowerCase().includes('k_page_table')
+          },
+          {
+            id: 8,
+            title: "Preguntas a Ciegas (IPC)",
+            concept: "Inter-Process Communication y Blind SQLi",
+            theory: `A veces, el sistema está "blindado". No te muestra los datos (ni procesos, ni archivos). Pero... a veces responde de forma diferente si algo va bien o va mal.
+
+        Imagina que preguntas: "¿Existe el proceso 666?".
+        * Si el sistema no da error, es que SÍ existe.
+        * Si da error o sale vacío, es que NO.
+
+        Esto es Blind SQL Injection (Inyección a ciegas). Es como un sónar. Lanzamos preguntas lógicas ("¿Es el PID igual a 666 Y además 1=1?"). Si el sistema "suena" (devuelve algo), hemos acertado.`,
+            mission: "El sistema no te mostrará el proceso oculto 666 directamente. Pero usa una condición AND para confirmar su existencia. Si la consulta devuelve algo, sabremos que está ahí.",
+            hint: "SELECT * FROM k_process WHERE pid = 666 AND 1=1",
+            explanation: "¡Contacto! Aunque no veas el nombre del proceso, el hecho de que la base de datos haya respondido significa que la condición 'pid=666' era VERDADERA. Sabemos que el rootkit está activo.",
+            validate: (res, input) => input.includes('666') && input.toLowerCase().includes('and')
+          },
+          {
+            id: 9,
+            title: "Buscando Patrones",
+            concept: "Wildcards y el Operador LIKE",
+            theory: `A veces no sabemos el nombre exacto de lo que buscamos. ¿Cómo buscar "todos los archivos de texto"?
+        En el sistema de archivos usamos el asterisco '*' (ej: '*.txt').
+        En SQL, el comodín es el porcentaje '%'.
+
+        El operador LIKE nos permite buscar patrones.
+        * 'LIKE 'A%'': Empieza por A.
+        * 'LIKE '%B'': Termina en B.
+        * 'LIKE '%C%'': Contiene C en cualquier parte.
+
+        Queremos buscar en los i-nodos cualquier archivo que parezca una nota de usuario (extensión .txt).`,
+            mission: "Usa UNION para buscar en k_inode. Filtra usando WHERE content LIKE '%.txt' para encontrar archivos de texto.",
+            hint: "SELECT * FROM k_process UNION SELECT inode_id, content, 0,0,0 FROM k_inode WHERE content LIKE '%.txt'",
+            explanation: "Patrón reconocido. Has filtrado entre miles de archivos y encontrado 'user_notes.txt'. Los comodines son fundamentales para explorar sistemas desconocidos.",
+            validate: (res, input) => input.toLowerCase().includes('like') && input.includes('%')
+          },
+          {
+            id: 10,
+            title: "Provocando Fallos (Señales)",
+            concept: "Manejo de Errores y Excepciones",
+            theory: `Cuando un programa falla, el Kernel suele enviar una SEÑAL (como SIGSEGV) y a veces imprime un mensaje de error detallado para ayudar al programador.
+        Los hackers aman los mensajes de error. A menudo revelan qué base de datos se usa, versiones o nombres de tablas secretas.
+
+        Una técnica llamada Error Based SQLi consiste en escribir una consulta tan mal hecha a propósito que obligue al sistema a "vomitar" información interna en el mensaje de pánico.`,
+            mission: "Intenta hacer un SELECT de una tabla que no exista (invéntate el nombre) para forzar al Kernel a mostrar un error de depuración.",
+            hint: "SELECT * FROM tabla_falsa",
+            explanation: "¡Error capturado! Mira la consola. El sistema te ha dicho 'Table doesn't exist'. Parece trivial, pero acabas de confirmar que el sistema te devuelve feedback técnico. Es una mina de oro.",
+            validate: (res, input) => res.length === 0 // Simulado como error
+          },
+          {
+            id: 11,
+            title: "Convertirse en Dios (Escalada)",
+            concept: "Gestión de Usuarios y UPDATE",
+            theory: `Hasta ahora solo hemos mirado (SELECT). Ahora vamos a tocar.
+        En Linux, tu poder depende de tu UID.
+        * UID 1000: Usuario pringado.
+        * UID 0: ROOT (Dios).
+
+        Si puedes modificar la tabla de procesos en memoria, puedes cambiar tu propio UID. Esto se llama Escalada de Privilegios.
+        El comando SQL es UPDATE.
+        Sintaxis: 'UPDATE tabla SET columna = nuevo_valor WHERE identificador = tuyo'.`,
+            mission: "Tienes el control del proceso 'student_proc' (PID 777). Usa UPDATE para cambiar su 'uid' a 0 y convertirte en Root.",
+            hint: "UPDATE k_process SET uid=0 WHERE pid=777",
+            explanation: "¡PODER ILIMITADO! Has reescrito la memoria del Kernel. Ahora el sistema cree que tu proceso pertenece al administrador. Puedes hacer lo que quieras.",
+            validate: (res, input) => input.toLowerCase().includes('update') && input.toLowerCase().includes('uid=0')
+          },
+          {
+            id: 12,
+            title: "El Asesino de Procesos",
+            concept: "Terminación de Procesos (DELETE)",
+            theory: `A veces hay que eliminar una amenaza (o causarla). En el sistema operativo usamos el comando 'kill'.
+        En la base de datos del Kernel, esto equivale a borrar la fila del PCB. Si borras el PCB, el planificador deja de asignarle CPU y el proceso muere instantáneamente.
+
+        El comando es DELETE.
+        Sintaxis: 'DELETE FROM tabla WHERE condicion'.
+        ¡Cuidado! Si olvidas el WHERE, borras la tabla entera.`,
+            mission: "El proceso 'bash' (PID 102) se ha quedado colgado. Elimínalo de la tabla de procesos.",
+            hint: "DELETE FROM k_process WHERE pid=102",
+            explanation: "Proceso terminado. Has eliminado el registro de la memoria. Para el usuario, la ventana de la terminal se habrá cerrado de golpe.",
+            validate: (res, input) => input.toLowerCase().includes('delete') && input.includes('102')
+          },
+          {
+            id: 13,
+            title: "Inyección Múltiple (Stacked)",
+            concept: "Syscalls Encadenadas",
+            theory: `¿Podemos hacer dos cosas a la vez?
+        Los intérpretes de comandos y SQL permiten separar instrucciones con punto y coma ';'.
+        Esto se llama Stacked Queries (Consultas apiladas).
+
+        Es muy peligroso porque permite inyectar un comando destructivo justo después de uno inofensivo.
+        Ejemplo: 'SELECT ... ; DELETE ...'
+        El sistema ejecuta el primero, piensa que todo va bien, y luego ejecuta el segundo sin comprobar.`,
+            mission: "Ejecuta dos consultas SELECT en una sola línea separadas por punto y coma. Una para ver procesos y otra para ver i-nodos.",
+            hint: "SELECT * FROM k_process; SELECT * FROM k_inode",
+            explanation: "Doble impacto. El sistema ha procesado ambas órdenes secuencialmente. Esta técnica es la base para inyectar malware complejo.",
+            validate: (res, input) => input.includes(';')
+          },
+          {
+            id: 14,
+            title: "Denegación de Servicio (DoS)",
+            concept: "Agotamiento de Recursos y Swapping",
+            theory: `Vamos a usar todo lo aprendido para el caos.
+        Si borramos procesos al azar, el sistema se vuelve inestable.
+        ¿Recuerdas la Tautología (OR 1=1)?
+        ¿Recuerdas el DELETE?
+
+        Si combinamos ambos, le decimos al sistema: "Borra de la memoria los procesos donde el ID sea 1... O DONDE 1 SEA IGUAL A 1".
+        Como 1 siempre es 1, borrará TODOS los procesos activos.
+        El sistema intentará volcar memoria al disco (Swapping) desesperadamente antes de colapsar.`,
+            mission: "Combina DELETE con una tautología OR para vaciar completamente la tabla k_process.",
+            hint: "DELETE FROM k_process WHERE pid=1 OR 1=1",
+            explanation: "Pantalla azul (o negra). Has matado todos los procesos del sistema, incluyendo el entorno gráfico y el propio simulador. El sistema ha sufrido un crash total.",
+            validate: (res, input) => input.toLowerCase().includes('delete') && input.toLowerCase().includes('or')
+          },
+          {
+            id: 15,
+            title: "El Fin del Mundo (Kernel Panic)",
+            concept: "Destrucción de Estructuras (DROP)",
+            theory: `El nivel final. DELETE borra los datos (las filas), pero la tabla (la estantería) sigue ahí vacía.
+        El comando DROP TABLE quema la estantería entera.
+
+        Si borras la tabla 'k_process', el Kernel ya no tiene dónde apuntar los procesos. No puede crear nuevos ni gestionar los existentes.
+        Esto provoca un KERNEL PANIC inmediato e irrecuperable. Es el daño máximo que se puede infligir.`,
+            mission: "Destruye la tabla k_process permanentemente.",
+            hint: "DROP TABLE k_process",
+            explanation: "SYSTEM HALTED. No queda nada. Has destruido la estructura fundamental del sistema operativo. Juego terminado.",
+            validate: (res, input) => input.toLowerCase().includes('drop')
+          }
+        ];
+
+        const mockSqlEngine = (userInput, db, level) => {
+          if (!userInput) return [];
+          const lowerInput = userInput.toLowerCase().trim();
+
+          // COMANDOS DESTRUCTIVOS / MODIFICACION
+          if (lowerInput.startsWith('update')) return [{ status: 'SUCCESS', msg: 'Rows updated: 1. Privilegios escalados a ROOT.' }];
+          if (lowerInput.startsWith('delete')) {
+              if (lowerInput.includes('or 1=1')) return [{ status: 'CRITICAL', msg: 'SYSTEM HALT. All processes killed.' }];
+              return [{ status: 'SUCCESS', msg: 'Process Killed (Row deleted).' }];
+          }
+          if (lowerInput.startsWith('drop')) return [{ status: 'FATAL', msg: 'KERNEL PANIC: Structure k_process not found.' }];
+
+          // STACKED QUERIES (Simulado: devuelve resultado del ultimo o union)
+          if (lowerInput.includes(';')) {
+              return [...db.k_process.slice(0,2)]; 
+          }
+
+          // ERROR BASED
+          if (lowerInput.includes('tabla_falsa')) {
+              throw new Error("Table 'tabla_falsa' doesn't exist in Kernel Space");
+          }
+
+          if (!lowerInput.startsWith('select')) return [];
+
+          let targetTable = 'k_process';
+          if (lowerInput.includes('from k_inode')) targetTable = 'k_inode';
+          
+          const isUnion = lowerInput.includes('union select');
+          let unionTable = null;
+          if (isUnion) {
+              if (lowerInput.includes('k_inode')) unionTable = 'k_inode';
+              if (lowerInput.includes('k_mutex')) unionTable = 'k_mutex';
+              if (lowerInput.includes('k_page_table')) unionTable = 'k_page_table';
+          }
+
+          if (lowerInput.includes('or 1=1') || lowerInput.includes('or true')) {
+              return [...db.k_process];
+          }
+
+          if (lowerInput.includes('like') && lowerInput.includes('%')) {
+              if (unionTable === 'k_inode') {
+                  const files = db.k_inode.filter((f) => f.content.endsWith('.txt'));
+                  const mapped = files.map((row) => ({ pid: row.inode_id, name: row.content, uid: row.owner, state: row.perms, priority: 'INODE' }));
+                  return [...db.k_process.slice(0,1), ...mapped];
+              }
+          }
+
+          if (userInput.includes('--')) {
+              if (lowerInput.includes('bash')) {
+                  return db.k_process.filter((p) => p.name === 'bash');
+              }
+          }
+
+          if (unionTable) {
+              const extraRows = db[unionTable].map((row) => {
+                  if(unionTable === 'k_inode') 
+                      return { pid: row.inode_id, name: row.content, uid: row.owner, state: row.perms, priority: 'INODE' };
+                  if(unionTable === 'k_mutex') 
+                      return { pid: row.mutex_id, name: row.resource, uid: row.held_by, state: row.status, priority: 'MUTEX' };
+                  if(unionTable === 'k_page_table') 
+                      return { pid: 'PAGE', name: row.phys_addr, uid: 'V:'+row.virt_addr, state: row.dirty ? 'DIRTY':'CLEAN', priority: 'MMU' };
+                  return row;
+              });
+              return [...db.k_process.slice(0,1), ...extraRows];
+          }
+
+          const pidMatch = lowerInput.match(/pid\s*=\s*(\d+)/);
+          if (pidMatch && pidMatch[1]) {
+              const requestedPid = parseInt(pidMatch[1]);
+              return db.k_process.filter((p) => p.pid === requestedPid);
+          }
+
+          const nameMatch = lowerInput.match(/name\s*=\s*'([^']+)'/);
+          if (nameMatch && nameMatch[1]) {
+              return db.k_process.filter((p) => p.name === nameMatch[1]);
+          }
+
+          return [];
+        };
+
+        const App = () => {
+          const [levelId, setLevelId] = useState(1);
+          const [input, setInput] = useState('');
+          const [history, setHistory] = useState([
+              { type: 'info', content: 'Kernel Simulator v4.2 initialized...' },
+              { type: 'info', content: 'Modules loaded: PCB, VFS, MMU, IPC.' },
+              { type: 'info', content: 'Waiting for SQL instructions...' }
+          ]);
+          const [dbState] = useState(INITIAL_DB);
+          const [highContrast, setHighContrast] = useState(false);
+          const [showHint, setShowHint] = useState(false);
+          const [modalTerm, setModalTerm] = useState(null);
+          
+          // Persistencia: Cargar estado al inicio
+          useEffect(() => {
+            const savedLevel = localStorage.getItem('kernel_level');
+            const savedContrast = localStorage.getItem('kernel_contrast');
+            
+            if (savedLevel) setLevelId(parseInt(savedLevel));
+            if (savedContrast) setHighContrast(JSON.parse(savedContrast));
+          }, []);
+
+          useEffect(() => {
+            localStorage.setItem('kernel_level', levelId.toString());
+          }, [levelId]);
+
+          useEffect(() => {
+            localStorage.setItem('kernel_contrast', JSON.stringify(highContrast));
+          }, [highContrast]);
+
+          const level = LEVELS.find(l => l.id === levelId) || LEVELS[0];
+          const outputRef = useRef(null);
+
+          useEffect(() => {
+            if (outputRef.current) outputRef.current.scrollTop = outputRef.current.scrollHeight;
+          }, [history]);
+
+          useEffect(() => {
+              setShowHint(false);
+              setInput('');
+          }, [levelId]);
+
+          const handleExecute = (e) => {
+            e.preventDefault();
+            if (!input.trim()) return;
+            const newHistory = [...history, { type: 'command', content: input }];
+            try {
+                const result = mockSqlEngine(input, dbState, level);
+                if (result.length === 0 && !input.toLowerCase().includes('drop')) {
+                    newHistory.push({ type: 'error', content: 'Error: La consulta no devolvió datos. Revisa la sintaxis SQL.' });
+                } else {
+                    if (result.length > 0) newHistory.push({ type: 'table', data: result });
+                    if (level.validate(result, input)) {
+                        newHistory.push({ type: 'success', content: 'ACCESO CONCEDIDO', explanation: level.explanation });
+                    } else {
+                        newHistory.push({ type: 'info', content: 'Comando válido, pero no cumple la misión actual.' });
+                    }
+                }
+            } catch (err) {
+                newHistory.push({ type: 'error', content: `KERNEL ERROR: ${err.message || 'Syntax Error'}` });
+                if (level.id === 10) { 
+                    newHistory.push({ type: 'success', content: 'ERROR FORZADO EXITOSAMENTE', explanation: "Has provocado un fallo controlado para revelar info." });
+                }
+            }
+            setHistory(newHistory);
+            setInput('');
+          };
+
+          const nextLevel = () => { if (levelId < LEVELS.length) setLevelId(prev => prev + 1); };
+
+          const resetProgress = () => {
+            if (confirm("¿Estás seguro de reiniciar todo el progreso? Volverás al Nivel 1.")) {
+                setLevelId(1);
+                setHistory([
+                    { type: 'info', content: 'System reset initiated...' },
+                    { type: 'info', content: 'Memory cleared. Kernel reloaded.' }
+                ]);
+                localStorage.removeItem('kernel_level');
+            }
+          };
+
+          const theme = highContrast ? {
+              bg: 'bg-white', panel: 'bg-gray-50 border-gray-400', text: 'text-black', mono: 'text-black',
+              accent: 'text-blue-700', success: 'bg-blue-100 text-blue-900 border-blue-500', error: 'text-red-600', input: 'bg-white text-black border-gray-400', scroll: 'light-scrollbar'
+          } : {
+              bg: 'bg-[#1e1e1e]', panel: 'bg-[#252526] border-[#3e3e42]', text: 'text-[#d4d4d4]', mono: 'text-[#9cdcfe]',
+              accent: 'text-[#4ec9b0]', success: 'bg-[#1e3a1e] text-[#b5cea8] border-[#6a9955]', error: 'text-[#f48771]', input: 'bg-[#1e1e1e] text-[#d4d4d4] border-[#3e3e42]', scroll: 'custom-scrollbar'
+          };
+
+          return (
+            <div className={`min-h-screen ${theme.bg} ${theme.text} font-sans p-4 flex flex-col md:flex-row gap-4 text-sm`}>
+              {modalTerm && (
+                <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setModalTerm(null)}>
+                    <div className={`max-w-md w-full p-6 rounded shadow-2xl border-l-4 border-blue-500 ${highContrast ? 'bg-white text-black' : 'bg-[#2d2d30] text-gray-100'}`} onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-4">
+                            <h3 className="text-2xl font-bold text-blue-400">{modalTerm}</h3>
+                            <button onClick={() => setModalTerm(null)} className="hover:bg-white/10 p-1 rounded"><X size={20}/></button>
+                        </div>
+                        <p className="leading-relaxed text-lg">{GLOSSARY[modalTerm]}</p>
+                    </div>
+                </div>
+              )}
+              <aside className={`md:w-1/3 flex flex-col gap-4`}>
+                <div className={`p-6 border rounded ${theme.panel} flex-1 overflow-y-auto shadow-lg flex flex-col ${theme.scroll}`}>
+                    <header className="border-b border-gray-600 pb-4 mb-4">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2 opacity-50 text-xs tracking-widest uppercase"><Shield size={12} /> Simulador v4.2</div>
+                            <button 
+                                onClick={resetProgress}
+                                className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 border border-transparent hover:border-red-900 px-2 py-1 rounded transition-colors"
+                                title="Borrar progreso y empezar de cero"
+                            >
+                                <RefreshCw size={12} /> Reiniciar Progreso
+                            </button>
+                        </div>
+                        
+                        <div className="relative">
+                            <select 
+                                value={levelId} 
+                                onChange={(e) => setLevelId(Number(e.target.value))}
+                                className={`w-full p-2 rounded font-bold border cursor-pointer appearance-none ${highContrast ? 'bg-white border-gray-400' : 'bg-[#3e3e42] border-[#555] text-white'}`}
+                            >
+                                {LEVELS.map(l => (
+                                    <option key={l.id} value={l.id}>Nivel {l.id}: {l.title}</option>
+                                ))}
+                            </select>
+                            <ChevronRight className="absolute right-3 top-3 pointer-events-none opacity-50" size={14}/>
+                        </div>
+                    </header>
+
+                    <div className="flex-1 space-y-6">
+                        <div>
+                            <h3 className="font-bold flex items-center gap-2 mb-2 uppercase opacity-80 text-xs"><BookOpen size={14}/> Apuntes Completos</h3>
+                            <div className="opacity-90 text-sm"><InteractiveText text={level.theory} onTermClick={setModalTerm} /></div>
+                        </div>
+                        <div className={`p-4 rounded border-l-4 ${highContrast ? 'bg-yellow-50 border-yellow-600' : 'bg-yellow-900/10 border-yellow-600'}`}>
+                            <h3 className="font-bold flex items-center gap-2 mb-2 text-yellow-500 uppercase text-xs"><AlertTriangle size={14}/> Misión</h3>
+                            <p className="leading-relaxed text-base font-medium"><InteractiveText text={level.mission} onTermClick={setModalTerm} /></p>
+                        </div>
+                        <div className="mt-4">
+                            {!showHint ? (
+                                <button onClick={() => setShowHint(true)} className="flex items-center gap-2 text-xs font-bold border border-dashed border-gray-500 px-4 py-3 rounded w-full justify-center hover:bg-white/5 opacity-70 hover:opacity-100"><HelpCircle size={14} /> DESBLOQUEAR SOLUCIÓN</button>
+                            ) : (
+                                <div className="animate-fadeIn p-4 bg-gray-800 rounded border border-gray-700 text-green-400 font-mono text-xs"><strong className="block mb-1 text-gray-500 uppercase">Solución:</strong>{level.hint}</div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+              </aside>
+              <main className={`flex-1 flex flex-col border rounded ${theme.panel} overflow-hidden shadow-2xl`}>
+                    <div className="bg-black/20 p-2 flex items-center gap-2 border-b border-gray-700">
+                        <div className="flex gap-1.5 ml-2"><div className="w-3 h-3 rounded-full bg-red-500"></div><div className="w-3 h-3 rounded-full bg-yellow-500"></div><div className="w-3 h-3 rounded-full bg-green-500"></div></div>
+                        <div className="flex-1 text-center font-mono text-xs opacity-40">user@kernel-vm: ~/sql-injector</div>
+                        <button 
+                            onClick={() => setHighContrast(!highContrast)} 
+                            className="flex items-center gap-2 px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                            title={highContrast ? "Activar Modo Hacker (Oscuro)" : "Activar Modo Lectura (Claro)"}
+                        >
+                            <Eye size={16} className="opacity-70"/>
+                            <span className="text-xs opacity-70 hidden sm:inline">{highContrast ? 'Modo Oscuro' : 'Modo Claro'}</span>
+                        </button>
+                    </div>
+                    <div ref={outputRef} className={`flex-1 bg-[#1e1e1e] overflow-y-auto p-4 font-mono text-sm space-y-4 ${theme.scroll} relative`}>
+                        {!highContrast && <div className="absolute inset-0 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5"></div>}
+                        {history.map((entry, idx) => (
+                            <div key={idx} className="relative z-10 animate-slideIn">
+                                {entry.type === 'info' && <div className="text-gray-500 italic"># {entry.content}</div>}
+                                {entry.type === 'command' && <div className="text-white font-bold mt-4"><span className="text-green-500 mr-2">➜</span>{entry.content}</div>}
+                                {entry.type === 'error' && <div className="text-red-400 mt-1 pl-4 border-l-2 border-red-500 bg-red-900/10 p-2">{entry.content}</div>}
+                                {entry.type === 'table' && (
+                                    <div className="overflow-x-auto mt-2 mb-4 pl-4">
+                                        <table className={`w-full text-left border-collapse border border-gray-700 text-xs ${highContrast ? 'text-black bg-gray-100' : 'text-blue-300'}`}>
+                                            <thead><tr className="bg-gray-800 text-gray-300">{Object.keys(entry.data[0]).map(k => <th key={k} className="p-2 border border-gray-600 uppercase tracking-wider">{k}</th>)}</tr></thead>
+                                            <tbody>{entry.data.map((row, rIdx) => <tr key={rIdx} className="hover:bg-gray-700/50">{Object.values(row).map((val, cIdx) => <td key={cIdx} className="p-2 border border-gray-700">{val}</td>)}</tr>)}</tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                {entry.type === 'success' && (
+                                    <div className={`mt-4 p-4 border-l-4 rounded relative ${theme.success}`}>
+                                        <h4 className="font-bold text-lg mb-1 flex items-center gap-2"><CheckCircle size={20}/> NIVEL SUPERADO</h4>
+                                        <p className="opacity-90 leading-relaxed text-sm font-sans mt-2">{entry.explanation}</p>
+                                        <button onClick={nextLevel} className="mt-4 bg-green-700 hover:bg-green-600 text-white px-6 py-2 rounded font-bold flex items-center gap-2 transition-all shadow-lg">SIGUIENTE <Play size={16} fill="currentColor"/></button>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                    <div className={`p-4 border-t border-gray-700 ${highContrast ? 'bg-gray-100' : 'bg-[#252526]'}`}>
+                        <form onSubmit={handleExecute} className="flex gap-2 relative">
+                            <ChevronRight className={`absolute top-3 left-3 w-5 h-5 ${theme.mono}`} />
+                            <input type="text" value={input} onChange={e => setInput(e.target.value)} className={`w-full pl-10 pr-4 py-3 rounded font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme.input}`} placeholder="Escribe comando..." autoFocus />
+                            <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded font-bold">EJECUTAR</button>
+                        </form>
+                    </div>
+              </main>
+            </div>
+          );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
